@@ -6,10 +6,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sava.Data;
+using Sava.Models;
+using Sava.Service;
 
 namespace Sava
 {
@@ -29,6 +32,16 @@ namespace Sava
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddSingleton<WeatherForecastService>();
+            
+            var connection = Configuration.GetConnectionString("DefaultConnection");
+            // добавляем контекст MobileContext в качестве сервиса в приложение
+            services.AddDbContext<DataBaseContext>(options =>
+                options.UseSqlite(connection));
+            
+            // services.AddScoped<dbService>();
+            services.AddSingleton(new ClearTempService());
+            services.AddScoped<FFmpegService>();
+            services.AddSingleton(new VoskService());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
