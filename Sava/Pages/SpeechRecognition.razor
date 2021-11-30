@@ -173,7 +173,7 @@ else if (AudioFiles != null)
                     }
 
                     if (await _ffmpegService.UnsupportedCodecAsync(Path.Combine("wwwroot", audioFile.SourceFile)))
-                        audioFile.ConvertedFile = await _ffmpegService.ConvertAsync(audioFile);
+                        audioFile.ConvertedFile = await _ffmpegService.ConvertAsync(audioFile.SourceFile);
 
                     AudioFiles.Add(audioFile);
                 }

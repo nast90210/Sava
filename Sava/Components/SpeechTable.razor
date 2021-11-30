@@ -1,6 +1,8 @@
 @using System.IO
+@using iText.StyledXmlParser.Css.Selector.Item
 @using Sava.Service
 @inject VoskService _voskService
+@inject FFmpegService _ffmpegService
 
 <table class="table table-sm table-bordered">
     <thead class="thead-dark">
@@ -47,15 +49,17 @@
                     case RecognitionStatus.Finish:
                         @if (audioFile.IsCollapsed)
                         {
-                            <button class="btn btn-outline-success" 
+                            <button class="btn btn-outline-success"
                                     @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
-                                    Результат <span class="oi oi-chevron-top"></span></button>
+                                Результат <span class="oi oi-chevron-top"></span>
+                            </button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-success" 
+                            <button class="btn btn-outline-success"
                                     @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
-                                    Результат <span class="oi oi-chevron-bottom"></span></button>
+                                Результат <span class="oi oi-chevron-bottom"></span>
+                            </button>
                         }
                         break;
                     default:
@@ -68,13 +72,24 @@
                 </button>
             </td>
         </tr>
-        if (audioFile.IsCollapsed)
+        @if (audioFile.IsCollapsed)
         {
-            <tr>
-                <td colspan="7">
-                    <RecognitionForm AudioFile="audioFile"></RecognitionForm>
-                </td>
-            </tr>
+            @if (audioFile.Meta != null)
+            {
+                <tr>
+                    <td colspan="7">
+                        <AvayaRecognitionForm AudioFile="audioFile"></AvayaRecognitionForm>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7">
+                        <SimpleRecognitionForm AudioFile="audioFile"></SimpleRecognitionForm>
+                    </td>
+                </tr>
+            }
         }
     }
     </tbody>
@@ -87,15 +102,6 @@
     </ModalDialog>
 }
 
-@* @if (OpenSpeechRecognitionResult) *@
-@* { *@
-@* <RecognitionForm Title="@("Результат распознания файла " + TempAudioFileRecognition.Name)" *@
-@* TempAudioFile="@TempAudioFileRecognition" *@
-@* OnClose="@OnSaveDialogClose"> *@
-@* </RecognitionForm> *@
-@* } *@
-
-
 @code {
 
     [Parameter]
@@ -104,22 +110,7 @@
     private bool DeleteDialogOpen { get; set; }
 
     private TempAudioFile TempAudioFileToDelete { get; set; }
-
-        @*
-        private bool OpenSpeechRecognitionResult { get; set; }
-        private TempAudioFile TempAudioFileRecognition { get; set; }
-        private void OnSaveDialogClose()
-        {
-        OpenSpeechRecognitionResult = false;
-        StateHasChanged();
-        }
-        private void OpenSaveDialog(TempAudioFile tempAudioFile)
-        {
-        OpenSpeechRecognitionResult = true;
-        TempAudioFileRecognition = tempAudioFile;
-        StateHasChanged();
-        } *@
-
+    
     private void OnDeleteDialogClose(bool accepted)
     {
         if (accepted)
@@ -142,20 +133,42 @@
     {
         if (File.Exists("wwwroot/" + tempAudioFile.SourceFile))
             File.Delete("wwwroot/" + tempAudioFile.SourceFile);
-        
-        if(AudioFiles.Contains(tempAudioFile))
+
+        if (AudioFiles.Contains(tempAudioFile))
             AudioFiles.Remove(tempAudioFile);
     }
 
     private async Task Recognize(TempAudioFile audioFile)
     {
         audioFile.CurrentStatus = RecognitionStatus.Execute;
-
-        audioFile.SourceResult = audioFile.Converted ?
-            await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.ConvertedFile)) :
-            await _voskService.RecognizeAsync(Path.Combine("wwwroot",audioFile.SourceFile));
         
+        if (audioFile.Converted)
+            await SplitAndConvert(audioFile, audioFile.ConvertedFile);
+        else
+            await SplitAndConvert(audioFile, audioFile.SourceFile);
+
         audioFile.CurrentStatus = RecognitionStatus.Finish;
     }
-    
+
+    private async Task SplitAndConvert(TempAudioFile audioFile, string file)
+    {
+        if (await _ffmpegService.IsStereo(file))
+        {
+            audioFile.IsStereo = true;
+            
+            audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, "0");
+            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, "1");
+
+            //Abonent
+            audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));
+            //Nomer
+            audioFile.SourceResultChannel1 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel1));
+        }
+        else
+        {
+            audioFile.IsStereo = false;
+            audioFile.SourceResult = await _voskService.RecognizeAsync(Path.Combine("wwwroot", file));
+        }
+    }
+
 }
