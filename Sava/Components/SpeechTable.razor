@@ -1,0 +1,174 @@
+@using System.IO
+@using iText.StyledXmlParser.Css.Selector.Item
+@using Sava.Service
+@inject VoskService _voskService
+@inject FFmpegService _ffmpegService
+
+<table class="table table-sm table-bordered">
+    <thead class="thead-dark">
+    <tr style="text-align: center">
+        <th>Play</th>
+        <th>Name</th>
+        <th>DateTime</th>
+        <th>Duration</th>
+        <th>Contacts</th>
+        <th>Recognition</th>
+        <th>Delete</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    @foreach (var audioFile in AudioFiles)
+    {
+        <tr style="text-align: center;">
+            <td style="width: 350px;">
+                @if (audioFile.Converted)
+                {
+                    <audio style="width: 300px;" controls src="@audioFile.ConvertedFile" preload="metadata"></audio>
+                }
+                else
+                {
+                    <audio style="width: 300px;" controls src="@audioFile.SourceFile" preload="metadata"></audio>
+                }
+            </td>
+            <td>@audioFile.Name</td>
+            <td>@audioFile.DateTime</td>
+            <td>@audioFile.Duration</td>
+            <td>@audioFile.Contacts</td>
+            <td>
+                @switch (audioFile.CurrentStatus)
+                {
+                    case RecognitionStatus.None:
+                        <button class="btn btn-primary" @onclick="e => Recognize(audioFile)">Распознать</button>
+                        break;
+                    case RecognitionStatus.Execute:
+                        <label>Распознается...</label>
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <span class="visually-hidden"></span>
+                        break;
+                    case RecognitionStatus.Finish:
+                        @if (audioFile.IsCollapsed)
+                        {
+                            <button class="btn btn-outline-success"
+                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                Результат <span class="oi oi-chevron-top"></span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-success"
+                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                Результат <span class="oi oi-chevron-bottom"></span>
+                            </button>
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            </td>
+            <td>
+                <button class="btn btn-danger btn-sm" @onclick="e => OpenDeleteDialog(audioFile)">
+                    <span class="oi oi-delete"></span> Удалить
+                </button>
+            </td>
+        </tr>
+        @if (audioFile.IsCollapsed)
+        {
+            @if (audioFile.Meta != null)
+            {
+                <tr>
+                    <td colspan="7">
+                        <AvayaRecognitionForm AudioFile="audioFile"></AvayaRecognitionForm>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="7">
+                        <SimpleRecognitionForm AudioFile="audioFile"></SimpleRecognitionForm>
+                    </td>
+                </tr>
+            }
+        }
+    }
+    </tbody>
+</table>
+
+@if (DeleteDialogOpen)
+{
+    <ModalDialog Title="Удаление" Text="@("Вы действительно хотите удалить файл " + TempAudioFileToDelete.Name + "?")"
+                 OnClose="@OnDeleteDialogClose" DialogType="ModalDialog.ModalDialogType.DeleteCancel">
+    </ModalDialog>
+}
+
+@code {
+
+    [Parameter]
+    public List<TempAudioFile> AudioFiles { get; set; }
+
+    private bool DeleteDialogOpen { get; set; }
+
+    private TempAudioFile TempAudioFileToDelete { get; set; }
+    
+    private void OnDeleteDialogClose(bool accepted)
+    {
+        if (accepted)
+        {
+            DeleteAudio(TempAudioFileToDelete);
+            TempAudioFileToDelete = null;
+        }
+        DeleteDialogOpen = false;
+        StateHasChanged();
+    }
+
+    private void OpenDeleteDialog(TempAudioFile tempAudioFile)
+    {
+        DeleteDialogOpen = true;
+        TempAudioFileToDelete = tempAudioFile;
+        StateHasChanged();
+    }
+
+    private void DeleteAudio(TempAudioFile tempAudioFile)
+    {
+        if (File.Exists("wwwroot/" + tempAudioFile.SourceFile))
+            File.Delete("wwwroot/" + tempAudioFile.SourceFile);
+
+        if (AudioFiles.Contains(tempAudioFile))
+            AudioFiles.Remove(tempAudioFile);
+    }
+
+    private async Task Recognize(TempAudioFile audioFile)
+    {
+        audioFile.CurrentStatus = RecognitionStatus.Execute;
+        
+        if (audioFile.Converted)
+            await SplitAndConvert(audioFile, audioFile.ConvertedFile);
+        else
+            await SplitAndConvert(audioFile, audioFile.SourceFile);
+
+        audioFile.CurrentStatus = RecognitionStatus.Finish;
+    }
+
+    private async Task SplitAndConvert(TempAudioFile audioFile, string file)
+    {
+        if (await _ffmpegService.IsStereo(file))
+        {
+            audioFile.IsStereo = true;
+            
+            audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, "0");
+            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, "1");
+
+            //Abonent
+            audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));
+            //Nomer
+            audioFile.SourceResultChannel1 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel1));
+        }
+        else
+        {
+            audioFile.IsStereo = false;
+            audioFile.SourceResult = await _voskService.RecognizeAsync(Path.Combine("wwwroot", file));
+        }
+    }
+
+}

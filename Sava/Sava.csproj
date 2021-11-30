@@ -5,4 +5,23 @@
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
+    <ItemGroup>
+      <Folder Include="wwwroot\audio\temp" />
+      <Folder Include="wwwroot\meta" />
+      <Folder Include="wwwroot\reports" />
+      <Folder Include="wwwroot\ffmpeg" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="itext7" Version="7.2.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.12" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.12">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Vosk" Version="0.3.32" />
+      <PackageReference Include="Xabe.FFmpeg" Version="5.0.2" />
+      <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.0.2" />
+    </ItemGroup>
+
 </Project>

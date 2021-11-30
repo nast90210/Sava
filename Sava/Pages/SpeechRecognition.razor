@@ -1,0 +1,201 @@
+@page "/SpeechRecognition"
+
+@using System.IO
+@using Microsoft.Extensions.Logging
+@using Sava.Components
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Newtonsoft.Json
+@using Sava.Service
+@inject ILogger<SpeechRecognition> _logger
+@inject ProtectedSessionStorage _protectedSessionStore
+@inject VoskService _voskService
+@inject FFmpegService _ffmpegService
+
+<h2>Speech Recognition</h2>
+
+<div class="row align-items-center gy-5">
+    <div class="col-2">
+        <label>Выберите мета-файл : </label>
+    </div>
+    <div class="col-auto">
+        <InputFile id="metaFileUpload"
+                   OnChange="@LoadMetaFile"
+                   accept=".json"
+                   hidden/>
+        <label type="button" class="btn btn-primary btn-sm" for="metaFileUpload">
+            Загрузить
+        </label>
+    </div>
+    <div class="col-2">
+        @if (MetaFile != null)
+        {
+            <label>@MetaFile.Name</label>
+        }
+    </div>
+</div>
+
+<div class="row align-items-baseline">
+    <div class="col-2">
+        <label>Выберите аудио файлы : </label>
+    </div>
+    <div class="col-auto">
+        <InputFile id="audioFilesFileUpload"
+                   OnChange="@LoadAudioFiles"
+                   accept=".wav, .WAV"
+                   multiple hidden/>
+        <label type="button" class="btn btn-primary btn-sm" for="audioFilesFileUpload">
+            Загрузить
+        </label>
+    </div>
+    <div class="col-2">
+        @if (AudioFiles.Count > 0)
+        {
+            <label>@("Загружено " + AudioFiles.Count + " аудио файл(ов)")</label>
+        }
+    </div>
+</div>
+
+@if (IsLoading)
+{
+    <label>Загрузка файлов на сервер...</label>
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden"></span>
+    </div>
+}
+else if (AudioFiles != null)
+{
+    <SpeechTable AudioFiles="AudioFiles"/>
+}
+
+@if (IsUploading)
+{
+    <label>Продолжается загрузка файлов на сервер...</label>
+    <div class="spinner-border text-primary" role="status"></div>
+    <span class="visually-hidden"></span>
+}
+
+@if (FileInCollectionDialogOpen)
+{
+    <ModalDialog Title="Внимание"
+                 Text="@("Файл " + DoubledFile + " уже был добавлен")"
+                 OnClose="() => FileInCollectionDialogOpen = false"
+                 DialogType="ModalDialog.ModalDialogType.Ok">
+    </ModalDialog>
+}
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            AudioFiles = new List<TempAudioFile>();
+
+            var metaResult = await _protectedSessionStore.GetAsync<MetaFile>("MetaFile");
+            MetaFile = metaResult.Success ? metaResult.Value : null;
+
+            var audioFilesResult = await _protectedSessionStore.GetAsync<List<TempAudioFile>>("TempAudioFiles");
+            AudioFiles = audioFilesResult.Success ? audioFilesResult.Value : new List<TempAudioFile>();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
+    }
+
+    private static readonly long MaxFileSize = 104857600; // 100 мегабайт
+    private static readonly int MaxAllowedFiles = 1000;
+
+    private bool FileInCollectionDialogOpen { get; set; }
+    private string DoubledFile { get; set; }
+
+    private MetaFile MetaFile { get; set; }
+    private List<TempAudioFile> AudioFiles { get; set; }
+
+    private bool IsLoading { get; set; }
+    private bool IsUploading { get; set; }
+
+    private static async Task<string> CopyFileToPath(string type, IBrowserFile file)
+    {
+        var path = Path.Combine(type, file.Name);
+        await using FileStream fs = new(Path.Combine("wwwroot/", path), FileMode.Create);
+        await file.OpenReadStream(MaxFileSize).CopyToAsync(fs);
+        return path;
+    }
+
+    private async Task LoadMetaFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var path = await CopyFileToPath("meta", e.File);
+            var metaData = JsonConvert.DeserializeObject<MetaData>(await File.ReadAllTextAsync(Path.Combine("wwwroot", path)));
+
+            MetaFile = new MetaFile
+            {
+                Name = e.File.Name,
+                Path = path,
+                MetaData = metaData
+            };
+
+            await _protectedSessionStore.SetAsync("MetaFile", MetaFile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("File: {Filename} Error: {Error}",
+                e.File.Name, ex.Message);
+        }
+    }
+
+    private async Task LoadAudioFiles(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            IsLoading = true;
+            DoubledFile = null;
+
+            foreach (var file in e.GetMultipleFiles(MaxAllowedFiles))
+            {
+                if (!AudioFiles.Exists(arg => arg.Name == file.Name))
+                {
+                    var path = await CopyFileToPath("audio", file);
+
+                    var audioFile = new TempAudioFile
+                    {
+                        Name = file.Name,
+                        SourceFile = path
+                    };
+
+                    if (MetaFile != null)
+                    {
+                        audioFile.Meta = MetaFile.FindSigment(Path.GetFileNameWithoutExtension(audioFile.Name));
+                        audioFile.MetaPath = MetaFile.Path;
+                    }
+
+                    if (await _ffmpegService.UnsupportedCodecAsync(Path.Combine("wwwroot", audioFile.SourceFile)))
+                        audioFile.ConvertedFile = await _ffmpegService.ConvertAsync(audioFile.SourceFile);
+
+                    AudioFiles.Add(audioFile);
+                }
+                else
+                {
+                    FileInCollectionDialogOpen = true;
+                    DoubledFile = file.Name;
+                }
+
+                IsLoading = false;
+                IsUploading = true;
+                StateHasChanged();
+            }
+
+            IsUploading = false;
+            StateHasChanged();
+            await _protectedSessionStore.SetAsync("TempAudioFiles", AudioFiles);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("File: {Filename} Error: {Error}",
+                e.File.Name, ex.Message);
+        }
+    }
+}
