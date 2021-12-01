@@ -33,12 +33,13 @@ namespace Sava
             services.AddServerSideBlazor();
             
             var connection = Configuration.GetConnectionString("DefaultConnection");
-            // добавляем контекст MobileContext в качестве сервиса в приложение
+        
             services.AddDbContext<DataBaseContext>(options =>
                 options.UseSqlite(connection));
-            
+
             // services.AddScoped<dbService>();
-            services.AddSingleton(new ClearTempService());
+            services.AddSingleton(new FolderService());
+            // services.AddSingleton(new ClearTempService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
         }
