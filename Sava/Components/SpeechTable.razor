@@ -156,8 +156,11 @@
         {
             audioFile.IsStereo = true;
             
-            audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, "0");
-            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, "1");
+            @* audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, "0");
+            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, "1"); *@
+
+            audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^2].Segmentchannels[0].ToString());
+            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^1].Segmentchannels[0].ToString());
 
             //Abonent
             audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));

@@ -18,6 +18,7 @@ namespace Sava.Service
             _model = new Model("wwwroot/model");
         }
 
+        //TODO: CanselizationToken to method
         public async Task<List<VoskResult>> RecognizeAsync(string file)
         {
             var results = new List<VoskResult>();

@@ -32,7 +32,7 @@ namespace Sava
                                 new MinDataRate(bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
                             options.Limits.MinResponseDataRate =
                                 new MinDataRate(bytesPerSecond: 100, gracePeriod: TimeSpan.FromSeconds(10));
-                            options.Listen(IPAddress.Parse("192.168.1.39"), 80);
+                            options.Listen(IPAddress.Parse("192.168.1.100"), 80);
                             // options.Listen(IPAddress.Loopback, 5000);
                         })
 #endif
