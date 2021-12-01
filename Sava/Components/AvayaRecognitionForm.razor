@@ -74,8 +74,20 @@
             var document = new Document(pdf);
             var ttf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "Arial.ttf");
             var baseFont = PdfFontFactory.CreateFont(ttf, "Cp1251");
-            var paragraph1 = new Paragraph(AudioFile.Result).SetFont(baseFont);
-            document.Add(paragraph1);
+
+            var DateTime = new Paragraph("Дата " + AudioFile.DateTime).SetFont(baseFont);
+            var Duration = new Paragraph("Длительность " + AudioFile.Duration).SetFont(baseFont);
+            var Abonent = new Paragraph("Абонент " + AudioFile.Abonent + " " + AudioFile.AbonentName).SetFont(baseFont);
+            var Nomer = new Paragraph("Номер " + AudioFile.Nomer + " " + AudioFile.NomerName).SetFont(baseFont);
+            var testResult = new Paragraph(AudioFile.Result).SetFont(baseFont);
+
+
+            document.Add(DateTime);
+            document.Add(Duration);
+            document.Add(Abonent);
+            document.Add(Nomer);
+            document.Add(new Paragraph(""));
+            document.Add(testResult);
             document.Close();
             
             return result;
