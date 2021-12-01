@@ -15,9 +15,8 @@ namespace Sava.Service
         {
             foreach (var folder in _folders)
             {
-                
-                if (Directory.Exists(Path.Combine("wwwroot",folder)))
-                    DeleteFiles(Path.Combine("wwwroot",folder));
+                if (Directory.Exists(Path.Combine("wwwroot", folder)))
+                    DeleteFiles(Path.Combine("wwwroot", folder));
             }            
         }
         

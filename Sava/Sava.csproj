@@ -6,10 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="wwwroot\audio\temp" />
-      <Folder Include="wwwroot\meta" />
-      <Folder Include="wwwroot\reports" />
-      <Folder Include="wwwroot\ffmpeg" />
+      <Folder Include="wwwroot/model" />
+      <Folder Include="wwwroot/ffmpeg" />
     </ItemGroup>
 
     <ItemGroup>
