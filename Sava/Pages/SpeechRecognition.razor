@@ -7,105 +7,115 @@
 @using Newtonsoft.Json
 @using Sava.Service
 @inject ILogger<SpeechRecognition> _logger
-@inject ProtectedSessionStorage _protectedSessionStore
+@inject ProtectedLocalStorage _protectedLocalStorage
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
 
 <h2>Speech Recognition</h2>
 
-<div class="row align-items-center gy-5">
-    <div class="col-2">
-        <label>Выберите мета-файл : </label>
-    </div>
-    <div class="col-auto">
-        <InputFile id="metaFileUpload"
-                   OnChange="@LoadMetaFile"
-                   accept=".json"
-                   hidden/>
-        <label type="button" class="btn btn-primary btn-sm" for="metaFileUpload">
-            Загрузить
-        </label>
-    </div>
-    <div class="col-2">
-        @if (MetaFile != null)
-        {
-            <label>@MetaFile.Name</label>
-        }
-    </div>
-</div>
-
-<div class="row align-items-baseline">
-    <div class="col-2">
-        <label>Выберите аудио файлы : </label>
-    </div>
-    <div class="col-auto">
-        <InputFile id="audioFilesFileUpload"
-                   OnChange="@LoadAudioFiles"
-                   accept=".wav, .WAV"
-                   multiple hidden/>
-        <label type="button" class="btn btn-primary btn-sm" for="audioFilesFileUpload">
-            Загрузить
-        </label>
-    </div>
-    <div class="col-2">
-        @if (AudioFiles.Count > 0)
-        {
-            <label>@("Загружено " + AudioFiles.Count + " аудио файл(ов)")</label>
-        }
-    </div>
-</div>
-
-@if (IsLoading)
+@if (IsIniviating)
 {
-    <label>Загрузка файлов на сервер...</label>
+    <label>Загрузка данных из кэша...</label>
     <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden"></span>
     </div>
 }
-else if (AudioFiles != null)
+else
 {
-    <SpeechTable AudioFiles="AudioFiles"/>
-}
+    <div class="row align-items-center gy-5">
+        <div class="col-2">
+            <label>Выберите мета-файл : </label>
+        </div>
+        <div class="col-auto">
+            <InputFile id="metaFileUpload"
+                       OnChange="@LoadMetaFile"
+                       accept=".json"
+                       hidden/>
+            <label type="button" class="btn btn-primary btn-sm" for="metaFileUpload">
+                Загрузить
+            </label>
+        </div>
+        <div class="col-2">
+            @if (MetaFile != null)
+            {
+                <label>@MetaFile.Name</label>
+            }
+        </div>
+    </div>
 
-@if (IsUploading)
-{
-    <label>Продолжается загрузка файлов на сервер...</label>
-    <div class="spinner-border text-primary" role="status"></div>
-    <span class="visually-hidden"></span>
-}
+    <div class="row align-items-baseline">
+        <div class="col-2">
+            <label>Выберите аудио файлы : </label>
+        </div>
+        <div class="col-auto">
+            <InputFile id="audioFilesFileUpload"
+                       OnChange="@LoadAudioFiles"
+                       accept=".wav, .WAV"
+                       multiple hidden/>
+            <label type="button" class="btn btn-primary btn-sm" for="audioFilesFileUpload">
+                Загрузить
+            </label>
+        </div>
+        <div class="col-2">
+            @if (AudioFiles.Count > 0)
+            {
+                <label>@("Загружено " + AudioFiles.Count + " аудио файл(ов)")</label>
+            }
+        </div>
+    </div>
 
-@if (FileInCollectionDialogOpen)
-{
-    <ModalDialog Title="Внимание"
-                 Text="@("Файл " + DoubledFile + " уже был добавлен")"
-                 OnClose="() => FileInCollectionDialogOpen = false"
-                 DialogType="ModalDialog.ModalDialogType.Ok">
-    </ModalDialog>
+    @if (IsLoading)
+    {
+        <label>Загрузка файлов на сервер...</label>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden"></span>
+        </div>
+    }
+    else if (AudioFiles != null)
+    {
+        <SpeechTable AudioFiles="AudioFiles"/>
+    }
+
+    @if (IsUploading)
+    {
+        <label>Продолжается загрузка файлов на сервер...</label>
+        <div class="spinner-border text-primary" role="status"></div>
+        <span class="visually-hidden"></span>
+    }
+
+    @if (FileInCollectionDialogOpen)
+    {
+        <ModalDialog Title="Внимание"
+                     Text="@("Файл " + DoubledFile + " уже был добавлен")"
+                     OnClose="() => FileInCollectionDialogOpen = false"
+                     DialogType="ModalDialog.ModalDialogType.Ok">
+        </ModalDialog>
+    }
 }
 
 @code
 {
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        IsIniviating = true;
         try
         {
-            AudioFiles = new List<TempAudioFile>();
-
-            var metaResult = await _protectedSessionStore.GetAsync<MetaFile>("MetaFile");
-            MetaFile = metaResult.Success ? metaResult.Value : null;
-
-            var audioFilesResult = await _protectedSessionStore.GetAsync<List<TempAudioFile>>("TempAudioFiles");
+            var audioFilesResult = await _protectedLocalStorage.GetAsync<List<TempAudioFile>>("TempAudioFiles");
             AudioFiles = audioFilesResult.Success ? audioFilesResult.Value : new List<TempAudioFile>();
+            
+            var metaResult = await _protectedLocalStorage.GetAsync<MetaFile>("MetaFile");
+            MetaFile = metaResult.Success ? metaResult.Value : null;
         }
         catch (Exception e)
         {
             _logger.LogError("File: {Filename} Error: {Error}",
                 e.Source, e.Message);
         }
+        IsIniviating = false;
     }
 
     private static readonly long MaxFileSize = 104857600; // 100 мегабайт
-    private static readonly int MaxAllowedFiles = 1000;
+    private static readonly int MaxAllowedFiles = 1000000; // 1 млн.
 
     private bool FileInCollectionDialogOpen { get; set; }
     private string DoubledFile { get; set; }
@@ -113,8 +123,10 @@ else if (AudioFiles != null)
     private MetaFile MetaFile { get; set; }
     private List<TempAudioFile> AudioFiles { get; set; }
 
+    private bool IsIniviating { get; set; }
     private bool IsLoading { get; set; }
     private bool IsUploading { get; set; }
+
 
     private static async Task<string> CopyFileToPath(string type, IBrowserFile file)
     {
@@ -138,7 +150,7 @@ else if (AudioFiles != null)
                 MetaData = metaData
             };
 
-            await _protectedSessionStore.SetAsync("MetaFile", MetaFile);
+            await _protectedLocalStorage.SetAsync("MetaFile", MetaFile);
         }
         catch (Exception ex)
         {
@@ -190,7 +202,7 @@ else if (AudioFiles != null)
 
             IsUploading = false;
             StateHasChanged();
-            await _protectedSessionStore.SetAsync("TempAudioFiles", AudioFiles);
+            await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
         }
         catch (Exception ex)
         {

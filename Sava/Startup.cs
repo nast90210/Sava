@@ -30,7 +30,8 @@ namespace Sava
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddServerSideBlazor();
+            // services.AddServerSideBlazor();
+            services.AddServerSideBlazor().AddHubOptions(hub => hub.MaximumReceiveMessageSize = 100 * 1024 * 1024);
             
             var connection = Configuration.GetConnectionString("DefaultConnection");
         
@@ -39,7 +40,6 @@ namespace Sava
 
             // services.AddScoped<dbService>();
             services.AddSingleton(new FolderService());
-            // services.AddSingleton(new ClearTempService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
         }
