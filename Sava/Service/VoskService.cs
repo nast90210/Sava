@@ -15,6 +15,15 @@ namespace Sava.Service
 
         public VoskService()
         {
+            try
+            {
+                Vosk.Vosk.GpuInit();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            
             _model = new Model("wwwroot/model");
         }
 
