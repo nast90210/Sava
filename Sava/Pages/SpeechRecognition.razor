@@ -13,7 +13,7 @@
 
 <h2>Speech Recognition</h2>
 
-@if (IsIniviating)
+@if (IsInitiating)
 {
     <label>Загрузка данных из кэша...</label>
     <div class="spinner-border text-primary" role="status">
@@ -97,7 +97,7 @@ else
 {
     protected override async Task OnParametersSetAsync()
     {
-        IsIniviating = true;
+        IsInitiating = true;
         try
         {
             var audioFilesResult = await _protectedLocalStorage.GetAsync<List<TempAudioFile>>("TempAudioFiles");
@@ -111,7 +111,7 @@ else
             _logger.LogError("File: {Filename} Error: {Error}",
                 e.Source, e.Message);
         }
-        IsIniviating = false;
+        IsInitiating = false;
     }
 
     private static readonly long MaxFileSize = 104857600; // 100 мегабайт
@@ -123,7 +123,7 @@ else
     private MetaFile MetaFile { get; set; }
     private List<TempAudioFile> AudioFiles { get; set; }
 
-    private bool IsIniviating { get; set; }
+    private bool IsInitiating { get; set; }
     private bool IsLoading { get; set; }
     private bool IsUploading { get; set; }
 
@@ -187,7 +187,8 @@ else
                     if (await _ffmpegService.UnsupportedCodecAsync(Path.Combine("wwwroot", audioFile.SourceFile)))
                         audioFile.ConvertedFile = await _ffmpegService.ConvertAsync(audioFile.SourceFile);
 
-                    AudioFiles.Add(audioFile);
+                    if(await FileIsNotShort(audioFile))
+                        AudioFiles.Add(audioFile);
                 }
                 else
                 {
@@ -209,5 +210,22 @@ else
             _logger.LogError("File: {Filename} Error: {Error}",
                 e.File.Name, ex.Message);
         }
+    }
+
+    private async Task<bool> FileIsNotShort(TempAudioFile audioFile)
+    {
+        var mediaInfo = await FFmpegService.Info(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
+
+        if (mediaInfo.Duration < new TimeSpan(0, 0, 11))
+        {
+            var results = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
+            
+            var letters = results.Where(voskResult => voskResult.text.ToCharArray().Length > 0).Sum(voskResult => voskResult.text.ToCharArray().Length);
+
+            if (letters < 4)
+                return false;
+        }
+        
+        return true;
     }
 }
