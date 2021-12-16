@@ -37,14 +37,12 @@ namespace Sava
             
             services.AddLocalization();
             
-            var connection = Configuration.GetConnectionString("DefaultConnection");
-
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlite("DataSource=account.db"));
             services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
-
             
+            // var connection = Configuration.GetConnectionString("DefaultConnection");
             // services.AddDbContext<DataBaseContext>(options =>
             //     options.UseSqlite(connection));
             // services.AddScoped<dbService>();

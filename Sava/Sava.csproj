@@ -9,6 +9,7 @@
       <Folder Include="Areas\Identity\Pages" />
       <Folder Include="wwwroot/model" />
       <Folder Include="wwwroot/ffmpeg" />
+      <Folder Include="wwwroot\reports" />
     </ItemGroup>
 
     <ItemGroup>

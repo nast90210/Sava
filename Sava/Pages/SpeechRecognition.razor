@@ -116,8 +116,8 @@ else
         IsInitiating = false;
     }
 
-    private static readonly long MaxFileSize = 104857600; // 100 мегабайт
-    private static readonly int MaxAllowedFiles = 1000000; // 1 млн.
+        private const long MaxFileSize = 104857600; // 100 мегабайт
+        private const int MaxAllowedFiles = 1000000; // 1 млн.
 
     private bool FileInCollectionDialogOpen { get; set; }
     private string DoubledFile { get; set; }
