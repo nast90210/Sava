@@ -4,8 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,15 +33,22 @@ namespace Sava
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            // services.AddServerSideBlazor();
             services.AddServerSideBlazor().AddHubOptions(hub => hub.MaximumReceiveMessageSize = 100 * 1024 * 1024);
             
+            services.AddLocalization();
+            
             var connection = Configuration.GetConnectionString("DefaultConnection");
-        
-            services.AddDbContext<DataBaseContext>(options =>
-                options.UseSqlite(connection));
 
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite("DataSource=account.db"));
+            services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<ApplicationDbContext>();
+            services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+
+            
+            // services.AddDbContext<DataBaseContext>(options =>
+            //     options.UseSqlite(connection));
             // services.AddScoped<dbService>();
+            
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
@@ -63,8 +73,14 @@ namespace Sava
 
             app.UseRouting();
 
+            app.UseRequestLocalization("ru-RU");
+            
+            app.UseAuthentication();
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });

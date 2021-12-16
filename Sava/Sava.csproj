@@ -6,12 +6,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Folder Include="Areas\Identity\Pages" />
       <Folder Include="wwwroot/model" />
       <Folder Include="wwwroot/ffmpeg" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="itext7" Version="7.2.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="5.0.13" />
+      <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.13" />
+      <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="5.0.13" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.12" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.12">
         <PrivateAssets>all</PrivateAssets>
