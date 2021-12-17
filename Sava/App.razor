@@ -3,8 +3,10 @@
         @* <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/> *@
         <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
             <NotAuthorized>
-                <h1>Ошибка</h1>
-                <p>Необходимо авторизоваться, чтобы использовать данный раздел</p>
+                <div class="alert alert-danger" role="alert">
+                    <h1>Ошибка</h1>
+                    <p>Необходимо авторизоваться, чтобы использовать данный раздел</p>
+                </div>
             </NotAuthorized>
         </AuthorizeRouteView>
     </Found>
