@@ -42,10 +42,10 @@ namespace Sava
             services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
             
-            // var connection = Configuration.GetConnectionString("DefaultConnection");
-            // services.AddDbContext<DataBaseContext>(options =>
-            //     options.UseSqlite(connection));
-            // services.AddScoped<dbService>();
+            var connection = Configuration.GetConnectionString("DefaultConnection");
+            services.AddDbContext<DataBaseContext>(options =>
+                options.UseSqlite(connection));
+            services.AddScoped<DbService>();
             
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();

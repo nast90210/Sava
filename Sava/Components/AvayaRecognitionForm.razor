@@ -3,6 +3,10 @@
 @using iText.Layout.Element
 @using System.IO
 @using iText.Kernel.Font
+@using Sava.Models
+@using Sava.Service
+
+@inject DbService _dbService;
 
 <div class="row">
     <div class="col">
@@ -10,13 +14,13 @@
             <div class="col">
                 <div class="p-2">
                     <label for="AbonentInput" class="form-label">Абонент</label>
-                    <input id="AbonentInput" class="form-control" type="text" @bind="@AudioFile.Abonent"/>
+                    <input id="AbonentInput" class="form-control" type="text" @bind="@TempAudioFile.Abonent"/>
                 </div>
             </div>
             <div class="col">
                 <div class="p-2">
                     <label for="NumberInput" class="form-label">Номер</label>
-                    <input id="NumberInput" class="form-control" type="text" @bind="@AudioFile.Nomer"/>
+                    <input id="NumberInput" class="form-control" type="text" @bind="@TempAudioFile.Nomer"/>
                 </div>
             </div>
         </div>
@@ -25,13 +29,13 @@
             <div class="col">
                 <div class="p-2">
                     <label for="AbonentNameInput" class="form-label">Имя</label>
-                    <input id="AbonentNameInput" class="form-control" type="text" @bind="@AudioFile.AbonentName"/>
+                    <input id="AbonentNameInput" class="form-control" type="text" @bind="@TempAudioFile.AbonentName"/>
                 </div>
             </div>
             <div class="col">
                 <div class="p-2">
                     <label for="NumberNameInput" class="form-label">Имя</label>
-                    <input id="NumberNameInput" class="form-control" type="text" @bind="@AudioFile.NomerName"/>
+                    <input id="NumberNameInput" class="form-control" type="text" @bind="@TempAudioFile.NomerName"/>
                 </div>
             </div>
         </div>
@@ -39,12 +43,12 @@
         <div class="row">
             <div class="col-auto">
                 <div class="p-2">
-                    <button class="btn btn-info">Сохранить в базе</button>
+                    <button class="btn btn-info" @onclick="SaveAsync">Сохранить в базе</button>
                 </div>
             </div>
             <div class="col-auto">
                 <div class="p-2">
-                    <a href="@Pdf" target="blank" class="btn btn-primary">Распечатать отчет</a>
+                    <a href="@PdfResultFile" @onclick="GetPdfReport" target="blank" class="btn btn-primary"> Распечатать отчет</a>
                 </div>
             </div>
         </div>
@@ -52,45 +56,63 @@
 
     <div class="col">
         <label for="recognitionResult" class="form-label">Результат распознания</label>
-        <textarea class="form-control" id="recognitionResult" rows="6" @bind="AudioFile.Result"></textarea>
+        <textarea class="form-control" id="recognitionResult" rows="6" @bind="TempAudioFile.Result"></textarea>
     </div>
 </div>
 
 @code{
+
     [Parameter]
-    public TempAudioFile AudioFile { get; set; }
+    public TempAudioFile TempAudioFile { get; set; }
+    
+    [Parameter]
+    public EventCallback<TempAudioFile> OnSaveCallback { get; set; }
 
-    private string Pdf
+    private string PdfResultFile => Path.Combine("reports", Path.GetFileNameWithoutExtension(TempAudioFile.Name)!, 
+        Path.GetFileNameWithoutExtension(TempAudioFile.Name) + ".pdf");
+
+    private async Task SaveAsync()
     {
-        get
+        var audioFile = new AudioFile
         {
-            var result = Path.Combine("reports", AudioFile.Name + ".pdf");
-            
-            if(File.Exists("wwwroot/" + result))
-                File.Delete("wwwroot/" + result);
-            
-            var writer = new PdfWriter("wwwroot/" + result);
-            var pdf = new PdfDocument(writer);
-            var document = new Document(pdf);
-            var ttf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "Arial.ttf");
-            var baseFont = PdfFontFactory.CreateFont(ttf, "Cp1251");
+            Name = TempAudioFile.Name,
+            Abonent = TempAudioFile.Abonent,
+            AbonentName = TempAudioFile.AbonentName,
+            Nomer = TempAudioFile.Nomer,
+            NomerName = TempAudioFile.NomerName,
+            SourceFile = await File.ReadAllBytesAsync(Path.Combine("wwwroot", TempAudioFile.SourceFile)),
+            Result = TempAudioFile.Result
+        };
 
-            var DateTime = new Paragraph("Дата " + AudioFile.DateTime).SetFont(baseFont);
-            var Duration = new Paragraph("Длительность " + AudioFile.Duration).SetFont(baseFont);
-            var Abonent = new Paragraph("Абонент " + AudioFile.Abonent + " " + AudioFile.AbonentName).SetFont(baseFont);
-            var Nomer = new Paragraph("Номер " + AudioFile.Nomer + " " + AudioFile.NomerName).SetFont(baseFont);
-            var testResult = new Paragraph(AudioFile.Result).SetFont(baseFont);
+        await _dbService.AddAudioFileAsync(audioFile);
 
-
-            document.Add(DateTime);
-            document.Add(Duration);
-            document.Add(Abonent);
-            document.Add(Nomer);
-            document.Add(new Paragraph(""));
-            document.Add(testResult);
-            document.Close();
-            
-            return result;
-        }
+        await OnSaveCallback.InvokeAsync(TempAudioFile);
     }
+
+    private void GetPdfReport()
+    {
+        if (File.Exists("wwwroot/" + PdfResultFile))
+            File.Delete("wwwroot/" + PdfResultFile);
+
+        var writer = new PdfWriter("wwwroot/" + PdfResultFile);
+        var pdf = new PdfDocument(writer);
+        var document = new Document(pdf);
+        var ttf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "Arial.ttf");
+        var baseFont = PdfFontFactory.CreateFont(ttf, "Cp1251");
+
+        var dateTime = new Paragraph("Дата " + TempAudioFile.DateTime).SetFont(baseFont);
+        var duration = new Paragraph("Длительность " + TempAudioFile.Duration).SetFont(baseFont);
+        var abonent = new Paragraph("Абонент " + TempAudioFile.Abonent + " " + TempAudioFile.AbonentName).SetFont(baseFont);
+        var nomer = new Paragraph("Номер " + TempAudioFile.Nomer + " " + TempAudioFile.NomerName).SetFont(baseFont);
+        var testResult = new Paragraph(TempAudioFile.Result).SetFont(baseFont);
+
+        document.Add(dateTime);
+        document.Add(duration);
+        document.Add(abonent);
+        document.Add(nomer);
+        document.Add(new Paragraph(""));
+        document.Add(testResult);
+        document.Close();
+    }
+
 }

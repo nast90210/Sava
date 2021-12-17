@@ -3,65 +3,66 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Sava.Data;
 using Sava.Models;
 
-namespace Sava.Data
+namespace Sava.Service
 {
-    public class dbService 
+    public class DbService 
     {
         private readonly DataBaseContext _dataBaseContext;
 
-        public dbService(DataBaseContext dataBase)
+        public DbService(DataBaseContext dataBase)
         {
             _dataBaseContext = dataBase;
         }
         
-        public async Task<List<TempAudioFile>> GetAudioFilesAsync()
+        public async Task<List<AudioFile>> GetAudioFilesAsync()
         {
-            return await _dataBaseContext.TempAudioFiles.ToListAsync();
+            return await _dataBaseContext.AudioFiles.ToListAsync();
         }
 
-        public async Task AddAudioFileAsync(TempAudioFile tempAudioFile)
+        public async Task AddAudioFileAsync(AudioFile audioFile)
         {
             try
             {
-                _dataBaseContext.TempAudioFiles.Add(tempAudioFile);
+                _dataBaseContext.AudioFiles.Add(audioFile);
                 await _dataBaseContext.SaveChangesAsync();
             }
             catch (Exception exception)
             {
-                throw new Exception($"Cannot Add TempAudioFile {tempAudioFile.Name}", exception);
+                throw new Exception($"Cannot Add TempAudioFile {audioFile.Name}", exception);
             }
         }
         
-        public async Task<TempAudioFile> UpdateAudioFileAsync(TempAudioFile tempAudioFile)
+        public async Task<AudioFile> UpdateAudioFileAsync(AudioFile audioFile)
         {
             try
             {
-                var audioFiletExist = _dataBaseContext.TempAudioFiles.FirstOrDefault(_audioFile => _audioFile.Id == tempAudioFile.Id);
+                var audioFiletExist = _dataBaseContext.AudioFiles.FirstOrDefault(_audioFile => _audioFile.Id == audioFile.Id);
                 if (audioFiletExist != null)
                 {
-                    _dataBaseContext.Update(tempAudioFile);
+                    _dataBaseContext.Update(audioFile);
                     await _dataBaseContext.SaveChangesAsync();
                 }
             }
             catch (Exception exception)
             {
-                throw new Exception($"Cannot Update TempAudioFile {tempAudioFile.Name}", exception);
+                throw new Exception($"Cannot Update TempAudioFile {audioFile.Name}", exception);
             }
-            return tempAudioFile;
+            return audioFile;
         }
         
-        public async Task DeleteProductAsync(TempAudioFile tempAudioFile)
+        public async Task DeleteProductAsync(AudioFile audioFile)
         {
             try
             {
-                _dataBaseContext.TempAudioFiles.Remove(tempAudioFile);
+                _dataBaseContext.AudioFiles.Remove(audioFile);
                 await _dataBaseContext.SaveChangesAsync();
             }
             catch (Exception exception)
             {
-                throw new Exception($"Cannot Delete TempAudioFile {tempAudioFile.Name}", exception);
+                throw new Exception($"Cannot Delete TempAudioFile {audioFile.Name}", exception);
             }
         }
         

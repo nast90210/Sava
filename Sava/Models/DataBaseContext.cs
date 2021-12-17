@@ -5,7 +5,8 @@ namespace Sava.Models
 {
     public sealed class DataBaseContext : DbContext
     {
-        public DbSet<TempAudioFile> TempAudioFiles { get; set; }
+        public DbSet<AudioFile> AudioFiles { get; set; }
+        
         public DataBaseContext(DbContextOptions<DataBaseContext> options)
             : base(options)
         {

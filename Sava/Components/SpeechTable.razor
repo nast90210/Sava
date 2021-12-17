@@ -81,7 +81,7 @@
             {
                 <tr>
                     <td colspan="7">
-                        <AvayaRecognitionForm AudioFile="audioFile"></AvayaRecognitionForm>
+                        <AvayaRecognitionForm TempAudioFile="audioFile" OnSaveCallback="DeleteAudio"></AvayaRecognitionForm>
                     </td>
                 </tr>
             }
@@ -114,11 +114,11 @@
 
     private TempAudioFile TempAudioFileToDelete { get; set; }
     
-    private void OnDeleteDialogClose(bool accepted)
+    private async Task OnDeleteDialogClose(bool accepted)
     {
         if (accepted)
         {
-            DeleteAudio(TempAudioFileToDelete);
+            await DeleteAudio(TempAudioFileToDelete);
             TempAudioFileToDelete = null;
         }
         DeleteDialogOpen = false;
@@ -139,7 +139,18 @@
         
         if (File.Exists(Path.Combine("wwwroot", tempAudioFile.ConvertedFile)))
             File.Delete(Path.Combine("wwwroot", tempAudioFile.ConvertedFile));
+
+        if (tempAudioFile.SplitedFileChannel0 != null)
+        {
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0));
+        }
         
+        if (tempAudioFile.SplitedFileChannel1 != null)
+        {
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1));
+        }
         if (AudioFiles.Contains(tempAudioFile))
             AudioFiles.Remove(tempAudioFile);
         
