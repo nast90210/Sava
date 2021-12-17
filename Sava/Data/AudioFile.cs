@@ -5,6 +5,8 @@ namespace Sava.Data
     public class AudioFile
     {
         public int Id { get; set; }
+        public string DateTime { get; set; }
+        public string Duration { get; set; }
         public string Name { get; set; }
         public string Abonent { get; set; }
         public string AbonentName { get; set; }

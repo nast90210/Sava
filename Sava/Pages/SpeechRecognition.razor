@@ -191,6 +191,14 @@ else
 
                     if(await FileIsNotShort(audioFile))
                         AudioFiles.Add(audioFile);
+                    else
+                    {
+                        if (File.Exists(Path.Combine("wwwroot", audioFile.SourceFile)))
+                            File.Delete(Path.Combine("wwwroot", audioFile.SourceFile));
+        
+                        if (File.Exists(Path.Combine("wwwroot", audioFile.ConvertedFile)))
+                            File.Delete(Path.Combine("wwwroot", audioFile.ConvertedFile));
+                    }
                 }
                 else
                 {

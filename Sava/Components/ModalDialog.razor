@@ -22,9 +22,9 @@
                         <button type="button" class="btn" @onclick="@ModalCancel">Отмена</button>
                         <button type="button" class="btn btn-danger" @onclick=@ModalOk>Удалить</button>
                         break;
-                    case ModalDialogType.WriteCancel:
+                    case ModalDialogType.SaveCancel:
                         <button type="button" class="btn" @onclick="@ModalCancel">Отмена</button>
-                        <button type="button" class="btn btn-warning" @onclick=@ModalOk>Записать</button>
+                        <button type="button" class="btn btn-warning" @onclick=@ModalOk>Сохранить</button>
                         break;
                 }
             </div>
@@ -60,6 +60,6 @@
         Ok,
         OkCancel,
         DeleteCancel,
-        WriteCancel
+        SaveCancel
     }
 }
