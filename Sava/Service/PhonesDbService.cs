@@ -21,21 +21,5 @@ namespace Sava.Service
             => _dataBaseContext.Phones.FirstOrDefault(p => p.sPhoneNum == Phone.ValidatePhoneNumber(phone)) ??
                _dataBaseContext.Phones.OrderBy(p => p.idObj)
                    .LastOrDefault(p => p.sPhoneNum.Length == phone.Length && p.sPhoneNum.EndsWith(phone));
-
-        public async Task<List<Phone>> FindAll(string lastName)
-            // => _dataBaseContext.Phones.ToList()
-            //     .Where(phone => phone.sFull_Last_Name != null &&
-            //                     phone.sFull_Last_Name.Contains(lastName, StringComparison.OrdinalIgnoreCase))
-            //     .OrderBy(phone => phone.idObj)
-            //     .Take(10).ToList();
-        {
-            var s = await _dataBaseContext.Phones.ToListAsync();
-            var t = s.FindAll(phone =>
-                phone.sFull_Last_Name != null &&
-                phone.sFull_Last_Name.Contains(lastName, StringComparison.OrdinalIgnoreCase));
-        
-            var d = t.Take(10);
-            return d.ToList();
-        }
     }
 }
