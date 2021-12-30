@@ -8,11 +8,11 @@ using Sava.Models;
 
 namespace Sava.Service
 {
-    public class DbService 
+    public class AudioFilesDbService 
     {
         private readonly DataBaseContext _dataBaseContext;
 
-        public DbService(DataBaseContext dataBase)
+        public AudioFilesDbService(DataBaseContext dataBase)
         {
             _dataBaseContext = dataBase;
         }

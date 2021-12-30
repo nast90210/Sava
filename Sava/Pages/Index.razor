@@ -1,7 +1,6 @@
 @page "/"
 @using System.IO
 @using System.IO.Compression
-@using iText.Commons.Utils
 
 @attribute [Authorize]
 
@@ -38,18 +37,17 @@ else
 }
 
 @code{
-    
     private bool LinkIsReady { get; set; }
     private bool IsArchiving { get; set; }
 
     private List<string> Results { get; set; }
     private readonly string _reportsPath = Path.Combine("wwwroot", "reports");
-    
     private readonly string _archive = Path.Combine("wwwroot", "reports.zip");
 
     protected override void OnInitialized()
     {
         Results = new List<string>();
+
         if (Directory.Exists(_reportsPath))
         {
             foreach (var file in Directory.GetFiles(_reportsPath))   
@@ -57,11 +55,6 @@ else
                 Results.Add(file);
             }
         }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-
     }
 
     private async Task PrepareArchive()
@@ -82,8 +75,9 @@ else
                     File.Delete(file);
             }
         });
-        StateHasChanged();
+    
         IsArchiving = false;
+        StateHasChanged();
     }
 
 }

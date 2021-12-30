@@ -53,14 +53,14 @@
                         @if (audioFile.IsCollapsed)
                         {
                             <button class="btn btn-outline-success"
-                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                    @onclick="e => OnResultButtonClick(audioFile)">
                                 Результат <span class="oi oi-chevron-top"></span>
                             </button>
                         }
                         else
                         {
                             <button class="btn btn-outline-success"
-                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                    @onclick="e => OnResultButtonClick(audioFile)">
                                 Результат <span class="oi oi-chevron-bottom"></span>
                             </button>
                         }
@@ -81,7 +81,9 @@
             {
                 <tr>
                     <td colspan="7">
-                        <AvayaRecognitionForm TempAudioFile="audioFile" OnSaveCallback="DeleteAudio"></AvayaRecognitionForm>
+                        <AvayaRecognitionForm TempAudioFile="audioFile" 
+                                              OnSaveCallback="DeleteAudio" 
+                                              OnUpdateCollectionCallback="UpdateCollection"/>
                     </td>
                 </tr>
             }
@@ -154,9 +156,12 @@
         
         if (AudioFiles.Contains(tempAudioFile))
             AudioFiles.Remove(tempAudioFile);
-        
-        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+
+        await UpdateCollection();
     }
+    
+    private async Task UpdateCollection() 
+        => await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
 
     private async Task Recognize(TempAudioFile audioFile)
     {
@@ -193,4 +198,9 @@
         }
     }
 
+    private async Task OnResultButtonClick(TempAudioFile audioFile)
+    {
+        audioFile.IsCollapsed = !audioFile.IsCollapsed;
+        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+    }
 }

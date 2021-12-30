@@ -8,3 +8,5 @@ riderModule.iml
 .DS_Store
 Sava/wwwroot/
 Sava/Base.db
+Sava/Base.db-shm
+Sava/Base.db-wal

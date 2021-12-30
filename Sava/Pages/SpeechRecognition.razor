@@ -12,6 +12,7 @@
 @inject ProtectedLocalStorage _protectedLocalStorage
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
+@inject PhonesDbService _phonesDbService
 
 <h2>Speech Recognition</h2>
 
@@ -100,6 +101,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         IsInitiating = true;
+        AudioFiles = new List<TempAudioFile>();
         try
         {
             var audioFilesResult = await _protectedLocalStorage.GetAsync<List<TempAudioFile>>("TempAudioFiles");
@@ -128,7 +130,6 @@ else
     private bool IsInitiating { get; set; }
     private bool IsLoading { get; set; }
     private bool IsUploading { get; set; }
-
 
     private static async Task<string> CopyFileToPath(string type, IBrowserFile file)
     {
@@ -174,7 +175,7 @@ else
                 {
                     var path = await CopyFileToPath("audio", file);
 
-                    var audioFile = new TempAudioFile
+                    var audioFile = new TempAudioFile()
                     {
                         Name = file.Name,
                         SourceFile = path
@@ -182,8 +183,10 @@ else
 
                     if (MetaFile != null)
                     {
-                        audioFile.Meta = MetaFile.FindSigment(Path.GetFileNameWithoutExtension(audioFile.Name));
+                        audioFile.Meta = MetaFile.FindSigmet(Path.GetFileNameWithoutExtension(audioFile.Name));
                         audioFile.MetaPath = MetaFile.Path;
+                        
+                        SetMeta(audioFile);
                     }
 
                     if (await _ffmpegService.UnsupportedCodecAsync(Path.Combine("wwwroot", audioFile.SourceFile)))
@@ -204,15 +207,17 @@ else
                 {
                     FileInCollectionDialogOpen = true;
                     DoubledFile = file.Name;
+                    StateHasChanged();
                 }
 
                 IsLoading = false;
                 IsUploading = true;
                 StateHasChanged();
             }
-
+            
             IsUploading = false;
             StateHasChanged();
+            
             await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
         }
         catch (Exception ex)
@@ -222,20 +227,44 @@ else
         }
     }
 
+    private void SetMeta(TempAudioFile audioFile)
+    {
+        if (audioFile.Meta == null) return;
+        
+        audioFile.DateTime = audioFile.Meta.Description[0];
+        audioFile.Duration = audioFile.Meta.Description[1];
+        audioFile.Contacts = audioFile.Meta.Description[3];
+
+        if (audioFile.Meta.Contact.Parties.Count <= 1) return;
+        
+        audioFile.Abonent = audioFile.Meta.Contact.Parties[^2].Name;
+        audioFile.Nomer = audioFile.Meta.Contact.Parties[^1].Name;
+
+        var abonent = _phonesDbService.Find(audioFile.Abonent);
+        if (abonent != null)
+        {
+            audioFile.IdAbonent = abonent.idPhone;
+            audioFile.AbonentName = abonent.ToString();
+            audioFile.IdAbonentName = abonent.idObj;
+        }
+        
+        var nomer = _phonesDbService.Find(audioFile.Nomer);
+        if (nomer != null)
+        {
+            audioFile.IdNomer = nomer.idPhone;
+            audioFile.NomerName = nomer.ToString();
+            audioFile.IdNomerName = nomer.idObj;
+        }
+    }
+
     private async Task<bool> FileIsNotShort(TempAudioFile audioFile)
     {
         var mediaInfo = await FFmpegService.Info(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
-
-        if (mediaInfo.Duration < new TimeSpan(0, 0, 11))
-        {
-            var results = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
-            
-            var letters = results.Where(voskResult => voskResult.text.ToCharArray().Length > 0).Sum(voskResult => voskResult.text.ToCharArray().Length);
-
-            if (letters < 4)
-                return false;
-        }
+        if (mediaInfo.Duration >= new TimeSpan(0, 0, 11)) 
+            return true;
         
-        return true;
+        var results = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
+        var letters = results.Where(voskResult => voskResult.text.ToCharArray().Length > 0).Sum(voskResult => voskResult.text.ToCharArray().Length);
+        return letters >= 4;
     }
 }
