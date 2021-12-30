@@ -45,7 +45,10 @@ namespace Sava
             var connection = Configuration.GetConnectionString("DefaultConnection");
             services.AddDbContext<DataBaseContext>(options =>
                 options.UseSqlite(connection));
-            services.AddScoped<DbService>();
+            services.AddTransient<AudioFilesDbService>();
+            services.AddTransient<PhonesDbService>();
+            services.AddTransient<PersonsDbService>();
+            
             
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();

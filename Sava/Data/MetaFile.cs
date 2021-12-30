@@ -8,7 +8,7 @@ namespace Sava.Data
         public string Path { get; set; }
         public MetaData MetaData { get; set; }
 
-        public Meta FindSigment(string fileName)
+        public Meta FindSigmet(string fileName)
             => MetaData.Data.FirstOrDefault(meta => meta.ContactId == fileName);
     }
 }

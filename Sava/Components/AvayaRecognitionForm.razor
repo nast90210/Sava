@@ -2,12 +2,15 @@
 @using iText.Layout
 @using iText.Layout.Element
 @using System.IO
+@using System.Threading
 @using iText.Kernel.Font
 @using Newtonsoft.Json
 @using Sava.Models
 @using Sava.Service
 
-@inject DbService _dbService;
+@inject AudioFilesDbService _audioFilesDbService;
+@inject PhonesDbService _phonesDbService;
+@inject PersonsDbService _personsDbService;
 
 <div class="row">
     <div class="col">
@@ -30,13 +33,25 @@
             <div class="col">
                 <div class="p-2">
                     <label for="AbonentNameInput" class="form-label">Имя</label>
-                    <input id="AbonentNameInput" class="form-control" type="text" @bind="@TempAudioFile.AbonentName"/>
+                    <RadzenAutoComplete id="AbonentNameInput" 
+                                        Data="@TempPersonCollection" 
+                                        TextProperty="CompanyName"
+                                        LoadData="@LoadPersonData" 
+                                        ValueChanged="AbonentCollectionChange" 
+                                        Style="width: 100%;"
+                                        Value="@TempAudioFile.AbonentName"/>
                 </div>
             </div>
             <div class="col">
                 <div class="p-2">
                     <label for="NumberNameInput" class="form-label">Имя</label>
-                    <input id="NumberNameInput" class="form-control" type="text" @bind="@TempAudioFile.NomerName"/>
+                    <RadzenAutoComplete id="NumberNameInput" 
+                                        Data="@TempPersonCollection" 
+                                        TextProperty="CompanyName"
+                                        LoadData="@LoadPersonData" 
+                                        ValueChanged="@NomerCollectionChange" 
+                                        Style="width: 100%;"
+                                        Value="@TempAudioFile.NomerName"/>
                 </div>
             </div>
         </div>
@@ -69,12 +84,15 @@
 }
 
 @code{
-
+    
     [Parameter]
     public TempAudioFile TempAudioFile { get; set; }
     
     [Parameter]
     public EventCallback<TempAudioFile> OnSaveCallback { get; set; }
+    
+    [Parameter]
+    public EventCallback OnUpdateCollectionCallback { get; set; }
     
     private bool SaveDialogOpen { get; set; }
     
@@ -95,8 +113,6 @@
         StateHasChanged();
     }
 
-    private string PdfResultFile => Path.Combine("reports", Path.GetFileNameWithoutExtension(TempAudioFile.Name) + ".pdf");
-
     private async Task SaveAsync()
     {
         var audioFile = new AudioFile
@@ -105,21 +121,28 @@
             DateTime = TempAudioFile.DateTime,
             Duration = TempAudioFile.Duration,
             Abonent = TempAudioFile.Abonent,
+            IdAbonent = TempAudioFile.IdAbonent,
             AbonentName = TempAudioFile.AbonentName,
+            IdAbonentName = TempAudioFile.IdAbonentName,
             Nomer = TempAudioFile.Nomer,
+            IdNomer = TempAudioFile.IdNomer,
             NomerName = TempAudioFile.NomerName,
+            IdNomerName = TempAudioFile.IdNomerName,
             SourceFile = await File.ReadAllBytesAsync(Path.Combine("wwwroot", TempAudioFile.SourceFile)),
             Result = TempAudioFile.Result
         };
 
-        await _dbService.AddAudioFileAsync(audioFile);
+        await _audioFilesDbService.AddAudioFileAsync(audioFile);
 
         await File.WriteAllTextAsync(Path.Combine("wwwroot", "reports", Path.GetFileNameWithoutExtension(audioFile.Name)! + ".json"),
             JsonConvert.SerializeObject(audioFile));
         
         await OnSaveCallback.InvokeAsync(TempAudioFile);
     }
-
+    
+    private string PdfResultFile 
+        => Path.Combine("reports", Path.GetFileNameWithoutExtension(TempAudioFile.Name) + ".pdf");
+    
     private void GetPdfReport()
     {
         if (File.Exists("wwwroot/" + PdfResultFile))
@@ -145,5 +168,46 @@
         document.Add(testResult);
         document.Close();
     }
+    
+    IEnumerable<Person> TempPersonCollection { get; set; }
+
+    object locker = new ();
+    
+    private void LoadPersonData(LoadDataArgs args)
+    {
+        lock (locker)
+        {
+            TempPersonCollection = _personsDbService.FindAll(args.Filter);    
+        }
+    }
+
+    private async Task AbonentCollectionChange(object obj)
+    {
+        var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
+        
+        if (temp == null) return;
+        
+        TempAudioFile.AbonentName = temp.Full;
+        TempAudioFile.IdAbonentName = temp.idObj.ToString();
+        
+        await OnUpdateCollectionCallback.InvokeAsync();
+        
+        StateHasChanged();
+    }
+    
+    private async Task NomerCollectionChange(object obj)
+    {
+        var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
+        
+        if (temp == null) return;
+        
+        TempAudioFile.NomerName = temp.Full;
+        TempAudioFile.IdNomerName = temp.idObj.ToString();
+        
+        await OnUpdateCollectionCallback.InvokeAsync();
+        
+        StateHasChanged();
+    }
+
 
 }
