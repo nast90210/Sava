@@ -11,9 +11,9 @@ namespace Sava.Data
 
         public TempAudioFile()
         {
-            SourceResult = new List<VoskResult>();
-            SourceResultChannel0 = new List<VoskResult>();
-            SourceResultChannel1 = new List<VoskResult>();
+            SourceResult = new List<IVoskResult>();
+            SourceResultChannel0 = new List<IVoskResult>();
+            SourceResultChannel1 = new List<IVoskResult>();
         }
 
         public int Id { get; set; }
@@ -42,7 +42,7 @@ namespace Sava.Data
             set => _result = value;
         }
 
-        public List<VoskResult> SourceResult { get; set; }
+        public List<IVoskResult> SourceResult { get; set; }
 
         public string Abonent
         {
@@ -83,7 +83,7 @@ namespace Sava.Data
         public bool IsStereo { get; set; }
         public string SplitedFileChannel0 { get; set; }
         public string SplitedFileChannel1 { get; set; }
-        public List<VoskResult> SourceResultChannel0 { get; set; }
-        public List<VoskResult> SourceResultChannel1 { get; set; }
+        public List<IVoskResult> SourceResultChannel0 { get; set; }
+        public List<IVoskResult> SourceResultChannel1 { get; set; }
     }
 }

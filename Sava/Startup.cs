@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Radzen;
 using Sava.Data;
 using Sava.Models;
 using Sava.Service;
@@ -53,6 +54,7 @@ namespace Sava
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
+            services.AddScoped<NotificationService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
