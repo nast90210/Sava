@@ -13,6 +13,7 @@
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
 @inject PhonesDbService _phonesDbService
+@inject NotificationService _notificationService;
 
 <h2>Speech Recognition</h2>
 
@@ -85,15 +86,6 @@ else
         <div class="spinner-border text-primary" role="status"></div>
         <span class="visually-hidden"></span>
     }
-
-    @if (FileInCollectionDialogOpen)
-    {
-        <ModalDialog Title="Внимание"
-                     Text="@("Файл " + DoubledFile + " уже был добавлен")"
-                     OnClose="() => FileInCollectionDialogOpen = false"
-                     DialogType="ModalDialog.ModalDialogType.Ok">
-        </ModalDialog>
-    }
 }
 
 @code
@@ -120,9 +112,6 @@ else
 
         private const long MaxFileSize = 104857600; // 100 мегабайт
         private const int MaxAllowedFiles = 1000000; // 1 млн.
-
-    private bool FileInCollectionDialogOpen { get; set; }
-    private string DoubledFile { get; set; }
 
     private MetaFile MetaFile { get; set; }
     private List<TempAudioFile> AudioFiles { get; set; }
@@ -167,7 +156,6 @@ else
         try
         {
             IsLoading = true;
-            DoubledFile = null;
 
             foreach (var file in e.GetMultipleFiles(MaxAllowedFiles))
             {
@@ -205,8 +193,13 @@ else
                 }
                 else
                 {
-                    FileInCollectionDialogOpen = true;
-                    DoubledFile = file.Name;
+                    _notificationService.Notify(new NotificationMessage()
+                    {
+                        Severity =NotificationSeverity.Warning, 
+                        Summary = "Внимание", 
+                        Detail = $"Файл {file.Name} уже есть в базе", 
+                        Duration = 4000
+                    });
                     StateHasChanged();
                 }
 

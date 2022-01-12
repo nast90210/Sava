@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Radzen;
 using Sava.Data;
 using Sava.Models;
 using Sava.Service;
@@ -48,7 +49,7 @@ namespace Sava
             services.AddTransient<AudioFilesDbService>();
             services.AddTransient<PhonesDbService>();
             services.AddTransient<PersonsDbService>();
-            
+            services.AddScoped<NotificationService>();
             
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();
