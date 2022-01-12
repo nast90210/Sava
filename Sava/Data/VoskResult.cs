@@ -7,7 +7,7 @@ using System.Text;
 namespace Sava.Data
 {
     [Serializable]
-    public class VoskResult : IVoskResult
+    public class VoskResult 
     {
         public List<VoskPartialResult> result { get; set; } = new ();
         public string text { get; set; }

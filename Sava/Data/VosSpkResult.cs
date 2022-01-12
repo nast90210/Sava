@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Sava.Data
 {
     [Serializable]
-    public class VoskSpkResult : IVoskResult
+    public class VoskSpkResult
     {
         public List<VoskPartialResult> result { get; set; } = new ();
         

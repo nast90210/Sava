@@ -29,37 +29,11 @@ namespace Sava.Service
             _model = new Model("wwwroot/model");
             _spkModel = new SpkModel("wwwroot/model-spk");
         }
-
-        public async Task<List<IVoskResult>> RecognizeAsync(string file, bool useSpkModel)
-            => useSpkModel ? await RecognizeAsyncWithSpk(file) : await RecognizeAsyncWithoutSpk(file);
-
-        private async Task<List<IVoskResult>> RecognizeAsyncWithSpk(string file)
-        {
-            var results = new List<IVoskResult>();
-
-            await Task.Run(() =>
-            {
-                var rec = new VoskRecognizer(_model, 16000.0f);
-                rec.SetSpkModel(_spkModel);
-                rec.SetMaxAlternatives(0);
-                rec.SetWords(true);
-                using Stream source = File.OpenRead(file);
-                var buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
-                    if (rec.AcceptWaveform(buffer, bytesRead))
-                        results.Add(JsonConvert.DeserializeObject<VoskSpkResult>(rec.Result()));
-                
-                results.Add(JsonConvert.DeserializeObject<VoskSpkResult>(rec.FinalResult()));
-            });
-
-            return results;
-        }
-
+        
         //TODO: CancellationToken to method
-        private async Task<List<IVoskResult>> RecognizeAsyncWithoutSpk(string file)
+        public async Task<List<VoskResult>> RecognizeAsync(string file)
         {
-            var results = new List<IVoskResult>();
+            var results = new List<VoskResult>();
 
             await Task.Run(() =>
             {
@@ -79,12 +53,12 @@ namespace Sava.Service
             return results;
         }
 
-        public static string GetCombinedResultNew(List<IVoskResult> sourceResultChannel0, string abonent,
-            List<IVoskResult> sourceResultChannel1, string nomer)
+        public static string GetCombinedResultNew(List<VoskResult> sourceResultChannel0, string abonent,
+            List<VoskResult> sourceResultChannel1, string nomer)
         {
             var builder = new StringBuilder();
-            var abonentResults = new Queue<IVoskResult>();
-            var nomerResults = new Queue<IVoskResult>();
+            var abonentResults = new Queue<VoskResult>();
+            var nomerResults = new Queue<VoskResult>();
 
             try
             {
@@ -95,8 +69,8 @@ namespace Sava.Service
                     nomerResults.Enqueue(voskResult);
 
                 string currentSpeaker = null;
-                IVoskResult abonentCurrent = null;
-                IVoskResult nomerCurrent = null;
+                VoskResult abonentCurrent = null;
+                VoskResult nomerCurrent = null;
 
                 if (abonentResults.Count > 0)
                     abonentCurrent = abonentResults.Dequeue();
@@ -148,8 +122,8 @@ namespace Sava.Service
             return builder.ToString();
         }
 
-        public static string GetCombinedResult(List<IVoskResult> sourceResultChannel0, string abonent,
-            List<IVoskResult> sourceResultChannel1, string nomer)
+        public static string GetCombinedResult(List<VoskResult> sourceResultChannel0, string abonent,
+            List<VoskResult> sourceResultChannel1, string nomer)
         {
             var builder = new StringBuilder();
             var abonentPartialResults = new Queue<VoskPartialResult>();
@@ -218,9 +192,9 @@ namespace Sava.Service
             return builder.ToString();
         }
 
-        public static string GetSplitResult(IEnumerable<IVoskResult> sourceResult)
+        public static string GetSplitResult(IEnumerable<VoskResult> sourceResult)
         {
-            return sourceResult.Where(voskResult => voskResult.text != " ").Aggregate<IVoskResult, string>(null,
+            return sourceResult.Where(voskResult => voskResult.text != " ").Aggregate<VoskResult, string>(null,
                 (current, voskResult) => current + "- " + voskResult.text + Environment.NewLine);
         }
     }
