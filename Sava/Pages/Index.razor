@@ -1,3 +1,83 @@
 @page "/"
+@using System.IO
+@using System.IO.Compression
 
-<h1>Добро пожаловать в будущее</h1>
+@attribute [Authorize]
+
+@if (Results.Count > 0)
+{
+    <div class="alert alert-success" role="alert">
+        <p>@($"В папке с отчетами есть {Results.Count} файлов. ")</p>
+        @if (LinkIsReady)
+        {
+            @if (IsArchiving)
+            {
+                <label>Загрузка данных из кэша...</label>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden"></span>
+                </div>
+            }
+            else
+            {
+                <a href="reports.zip" class="btn btn-link" download="reports.zip"
+                   target="=_top" @onclick="StateHasChanged">Скачать архив</a>    
+            }
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="PrepareArchive">Подготовить архив</button>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-secondary" role="alert">
+        <p>В папке с отчетами нет файлов.</p>
+    </div>
+}
+
+@code{
+    private bool LinkIsReady { get; set; }
+    private bool IsArchiving { get; set; }
+
+    private List<string> Results { get; set; }
+    private readonly string _reportsPath = Path.Combine("wwwroot", "reports");
+    private readonly string _archive = Path.Combine("wwwroot", "reports.zip");
+
+    protected override void OnInitialized()
+    {
+        Results = new List<string>();
+
+        if (Directory.Exists(_reportsPath))
+        {
+            foreach (var file in Directory.GetFiles(_reportsPath))   
+            {
+                Results.Add(file);
+            }
+        }
+    }
+
+    private async Task PrepareArchive()
+    {
+        LinkIsReady = true;
+        IsArchiving = true;
+        
+        await Task.Run(() =>
+        {
+            if (File.Exists(_archive))
+                    File.Delete(_archive);
+                
+            ZipFile.CreateFromDirectory(_reportsPath, _archive);
+
+            foreach (var file in Directory.GetFiles(_reportsPath))
+            {
+                if(File.Exists(file))
+                    File.Delete(file);
+            }
+        });
+    
+        IsArchiving = false;
+        StateHasChanged();
+    }
+
+}

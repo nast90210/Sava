@@ -4,12 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Radzen;
 using Sava.Data;
 using Sava.Models;
 using Sava.Service;
@@ -30,18 +34,27 @@ namespace Sava
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddServerSideBlazor();
+            services.AddServerSideBlazor().AddHubOptions(hub => hub.MaximumReceiveMessageSize = 100 * 1024 * 1024);
+            
+            services.AddLocalization();
+            
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite("DataSource=account.db"));
+            services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<ApplicationDbContext>();
+            services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
             
             var connection = Configuration.GetConnectionString("DefaultConnection");
-        
             services.AddDbContext<DataBaseContext>(options =>
                 options.UseSqlite(connection));
-
-            // services.AddScoped<dbService>();
+            services.AddTransient<AudioFilesDbService>();
+            services.AddTransient<PhonesDbService>();
+            services.AddTransient<PersonsDbService>();
+            services.AddScoped<NotificationService>();
+            
             services.AddSingleton(new FolderService());
-            // services.AddSingleton(new ClearTempService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
+            services.AddScoped<NotificationService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -63,8 +76,14 @@ namespace Sava
 
             app.UseRouting();
 
+            app.UseRequestLocalization("ru-RU");
+            
+            app.UseAuthentication();
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });

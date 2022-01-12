@@ -17,7 +17,6 @@ namespace Sava
         public FolderService()
         {
             CheckSystemFolderExist();
-            ClearTemp();
         }
 
         private void CheckSystemFolderExist()

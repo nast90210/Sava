@@ -1,8 +1,11 @@
 @using System.IO
 @using iText.StyledXmlParser.Css.Selector.Item
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Sava.Service
+
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
+@inject ProtectedLocalStorage _protectedLocalStorage
 
 <table class="table table-sm table-bordered">
     <thead class="thead-dark">
@@ -20,7 +23,7 @@
 
     @foreach (var audioFile in AudioFiles)
     {
-        <tr style="text-align: center;">
+        <tr style="text-align: center">
             <td style="width: 350px;">
                 @if (audioFile.Converted)
                 {
@@ -50,14 +53,14 @@
                         @if (audioFile.IsCollapsed)
                         {
                             <button class="btn btn-outline-success"
-                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                    @onclick="e => OnResultButtonClick(audioFile)">
                                 Результат <span class="oi oi-chevron-top"></span>
                             </button>
                         }
                         else
                         {
                             <button class="btn btn-outline-success"
-                                    @onclick="e => audioFile.IsCollapsed = !audioFile.IsCollapsed">
+                                    @onclick="e => OnResultButtonClick(audioFile)">
                                 Результат <span class="oi oi-chevron-bottom"></span>
                             </button>
                         }
@@ -78,7 +81,9 @@
             {
                 <tr>
                     <td colspan="7">
-                        <AvayaRecognitionForm AudioFile="audioFile"></AvayaRecognitionForm>
+                        <AvayaRecognitionForm TempAudioFile="audioFile" 
+                                              OnSaveCallback="DeleteAudio" 
+                                              OnUpdateCollectionCallback="UpdateCollection"/>
                     </td>
                 </tr>
             }
@@ -111,11 +116,11 @@
 
     private TempAudioFile TempAudioFileToDelete { get; set; }
     
-    private void OnDeleteDialogClose(bool accepted)
+    private async Task OnDeleteDialogClose(bool accepted)
     {
         if (accepted)
         {
-            DeleteAudio(TempAudioFileToDelete);
+            await DeleteAudio(TempAudioFileToDelete);
             TempAudioFileToDelete = null;
         }
         DeleteDialogOpen = false;
@@ -129,14 +134,34 @@
         StateHasChanged();
     }
 
-    private void DeleteAudio(TempAudioFile tempAudioFile)
+    private async Task DeleteAudio(TempAudioFile tempAudioFile)
     {
-        if (File.Exists("wwwroot/" + tempAudioFile.SourceFile))
-            File.Delete("wwwroot/" + tempAudioFile.SourceFile);
+        if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SourceFile)))
+            File.Delete(Path.Combine("wwwroot", tempAudioFile.SourceFile));
+        
+        if (File.Exists(Path.Combine("wwwroot", tempAudioFile.ConvertedFile)))
+            File.Delete(Path.Combine("wwwroot", tempAudioFile.ConvertedFile));
 
+        if (tempAudioFile.SplitedFileChannel0 != null)
+        {
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0));
+        }
+        
+        if (tempAudioFile.SplitedFileChannel1 != null)
+        {
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1));
+        }
+        
         if (AudioFiles.Contains(tempAudioFile))
             AudioFiles.Remove(tempAudioFile);
+
+        await UpdateCollection();
     }
+    
+    private async Task UpdateCollection() 
+        => await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
 
     private async Task Recognize(TempAudioFile audioFile)
     {
@@ -148,6 +173,8 @@
             await SplitAndConvert(audioFile, audioFile.SourceFile);
 
         audioFile.CurrentStatus = RecognitionStatus.Finish;
+        
+        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
     }
 
     private async Task SplitAndConvert(TempAudioFile audioFile, string file)
@@ -156,9 +183,6 @@
         {
             audioFile.IsStereo = true;
             
-            @* audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, "0");
-            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, "1"); *@
-
             audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^2].Segmentchannels[0].ToString());
             audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^1].Segmentchannels[0].ToString());
 
@@ -174,4 +198,9 @@
         }
     }
 
+    private async Task OnResultButtonClick(TempAudioFile audioFile)
+    {
+        audioFile.IsCollapsed = !audioFile.IsCollapsed;
+        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+    }
 }

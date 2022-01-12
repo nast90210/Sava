@@ -1,12 +1,13 @@
 using System.Collections.Generic;
+using Sava.Service;
 
 namespace Sava.Data
 {
     public class TempAudioFile
     {
         private string _result;
-        private Meta _meta;
-        private string abonentName, nomerName;
+        private string _abonentName, _nomerName;
+        private string _abonent, _nomer;
 
         public TempAudioFile()
         {
@@ -23,27 +24,7 @@ namespace Sava.Data
         public bool Converted
             => ConvertedFile != null;
 
-        public Meta Meta
-        {
-            get => _meta;
-
-            set
-            {
-                _meta = value;
-
-                if (value == null) return;
-
-                DateTime = _meta.Description[0];
-                Duration = _meta.Description[1];
-                Contacts = _meta.Description[3];
-
-                if (_meta.Contact.Parties.Count > 1)
-                {
-                    Abonent = _meta.Contact.Parties[^2].Name;
-                    Nomer = _meta.Contact.Parties[^1].Name;
-                }
-            }
-        }
+        public Meta Meta { get; set; }
 
         public string MetaPath { get; set; }
 
@@ -53,8 +34,8 @@ namespace Sava.Data
             {
                 if (_result == null)
                     return IsStereo
-                        ? VoskResult.GetCombinedResult(SourceResultChannel0, AbonentName, SourceResultChannel1, NomerName)
-                        : VoskResult.GetSplitResult(SourceResult);
+                        ? VoskService.GetCombinedResultNew(SourceResultChannel0, AbonentName, SourceResultChannel1, NomerName)
+                        : VoskService.GetSplitResult(SourceResult);
 
                 return _result;
             }
@@ -65,30 +46,35 @@ namespace Sava.Data
 
         public string Abonent
         {
-            get;
-            set;
-            // Здесь получаем Имя владельца номера из БДСервиса
+            get => _abonent;   
+            set => _abonent = Phone.ValidatePhoneNumber(value);
         }
+        
+        public string IdAbonent { get; set; }
 
         public string AbonentName
         {
-            get => abonentName ?? Abonent;
-            set => abonentName = value;
+            get => _abonentName ?? Abonent;
+            set => _abonentName = value;
         }
 
+        public string IdAbonentName { get; set; }
+        
         public string Nomer
         {
-            get;
-            set;
-            // Здесь получаем Имя владельца номера из БДСервиса
+            get => _nomer;   
+            set => _nomer = Phone.ValidatePhoneNumber(value);
         }
+        public string IdNomer { get; set; }
 
         public string NomerName
         {
-            get => nomerName ?? Nomer;
-            set => nomerName = value;
+            get => _nomerName ?? Nomer;
+            set => _nomerName = value;
         }
 
+        public string IdNomerName { get; set; }
+        
         public string DateTime { get; set; }
         public string Duration { get; set; }
         public string Contacts { get; set; }
