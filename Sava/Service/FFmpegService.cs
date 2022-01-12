@@ -47,7 +47,7 @@ namespace Sava.Service
             return mediaInfo.AudioStreams.FirstOrDefault()?.Channels > 1 ;
         }
         
-        private static async Task<IMediaInfo> Info(string source)
+        public static async Task<IMediaInfo> Info(string source)
             => await FFmpeg.GetMediaInfo(source);
         
         private static async Task Convert(IMediaInfo info, string outputPath, int channel, bool splitting = false)
