@@ -54,6 +54,7 @@ namespace Sava
             services.AddSingleton(new FolderService());
             services.AddScoped<FFmpegService>();
             services.AddSingleton(new VoskService());
+            services.AddScoped<NotificationService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
