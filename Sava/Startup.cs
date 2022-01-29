@@ -17,6 +17,7 @@ using Radzen;
 using Sava.Data;
 using Sava.Models;
 using Sava.Service;
+using Serilog;
 
 namespace Sava
 {
@@ -25,6 +26,11 @@ namespace Sava
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(configuration)
+                .CreateLogger();
+            Log.Information("Starting up Sava Server");
         }
 
         public IConfiguration Configuration { get; }

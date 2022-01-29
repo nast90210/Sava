@@ -2,13 +2,12 @@
 @attribute [Authorize]
 
 @using System.IO
-@using Microsoft.Extensions.Logging
 @using Sava.Components
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Newtonsoft.Json
 @using Sava.Service
+@using Serilog
 
-@inject ILogger<SpeechRecognition> _logger
 @inject ProtectedLocalStorage _protectedLocalStorage
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
@@ -96,6 +95,9 @@ else
         AudioFiles = new List<TempAudioFile>();
         try
         {
+            Log.Information("{@SourceObject}: Try to load data from Local Storage", 
+                typeof(SpeechRecognition) );
+            
             var audioFilesResult = await _protectedLocalStorage.GetAsync<List<TempAudioFile>>("TempAudioFiles");
             AudioFiles = audioFilesResult.Success ? audioFilesResult.Value : new List<TempAudioFile>();
             
@@ -104,7 +106,7 @@ else
         }
         catch (Exception e)
         {
-            _logger.LogError("File: {Filename} Error: {Error}",
+            Log.Error("File: {Filename} Error: {Error}",
                 e.Source, e.Message);
         }
         IsInitiating = false;
@@ -122,19 +124,35 @@ else
 
     private static async Task<string> CopyFileToPath(string type, IBrowserFile file)
     {
+        Log.Information("{@SourceObject}: Try to upload file {@File} to Server", 
+            typeof(SpeechRecognition),  file.Name);
+        
         var path = Path.Combine(type, file.Name);
-        await using FileStream fs = new(Path.Combine("wwwroot/", path), FileMode.Create);
-        await file.OpenReadStream(MaxFileSize).CopyToAsync(fs);
+        try
+        {
+            await using FileStream fs = new(Path.Combine("wwwroot/", path), FileMode.Create);
+            await file.OpenReadStream(MaxFileSize).CopyToAsync(fs);
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+            
+            throw new Exception(e.Message);
+        }
+
         return path;
     }
 
     private async Task LoadMetaFile(InputFileChangeEventArgs e)
     {
+        Log.Information("{@SourceObject}: Loading Meta file {@File}", 
+            typeof(SpeechRecognition),  e.File.Name);
         try
         {
             var path = await CopyFileToPath("meta", e.File);
+            
             var metaData = JsonConvert.DeserializeObject<MetaData>(await File.ReadAllTextAsync(Path.Combine("wwwroot", path)));
-
             MetaFile = new MetaFile
             {
                 Name = e.File.Name,
@@ -142,11 +160,14 @@ else
                 MetaData = metaData
             };
 
+            Log.Information("{@SourceObject}: Saving MetaFie {@MetaFile} in Local Storage", 
+                typeof(SpeechRecognition), e.File.Name);
+            
             await _protectedLocalStorage.SetAsync("MetaFile", MetaFile);
         }
         catch (Exception ex)
         {
-            _logger.LogError("File: {Filename} Error: {Error}",
+            Log.Error("File: {Filename} Error: {Error}",
                 e.File.Name, ex.Message);
         }
     }
@@ -161,6 +182,9 @@ else
             {
                 if (!AudioFiles.Exists(arg => arg.Name == file.Name))
                 {
+                    Log.Information("{@SourceObject}: Loading Audio file {@File}", 
+                        typeof(SpeechRecognition),  file.Name);
+                    
                     var path = await CopyFileToPath("audio", file);
 
                     var audioFile = new TempAudioFile()
@@ -171,6 +195,9 @@ else
 
                     if (MetaFile != null)
                     {
+                        Log.Information("{@SourceObject}: Setting Meta data file {@File}", 
+                            typeof(SpeechRecognition),  file.Name);
+                        
                         audioFile.Meta = MetaFile.FindSigmet(Path.GetFileNameWithoutExtension(audioFile.Name));
                         audioFile.MetaPath = MetaFile.Path;
                         
@@ -178,12 +205,26 @@ else
                     }
 
                     if (await _ffmpegService.UnsupportedCodecAsync(Path.Combine("wwwroot", audioFile.SourceFile)))
+                    {
+                        Log.Information("{@SourceObject}: File {@File} is in unsupported format. " +
+                                  "Try to convert to WAV PCM 16bit", 
+                            typeof(SpeechRecognition),  file.Name);
+                        
                         audioFile.ConvertedFile = await _ffmpegService.ConvertAsync(audioFile.SourceFile);
+                    }
 
-                    if(await FileIsNotShort(audioFile))
+                    if (await FileIsNotShort(audioFile))
+                    {
+                        Log.Information("{@SourceObject}: Adding file {@File} to AudioFiles Collection", 
+                            typeof(SpeechRecognition),  file.Name);
+                        
                         AudioFiles.Add(audioFile);
+                    }
                     else
                     {
+                        Log.Information("{@SourceObject}: File {@File} is short and don't contain speech. Deleting", 
+                            typeof(SpeechRecognition),  file.Name);
+                        
                         if (File.Exists(Path.Combine("wwwroot", audioFile.SourceFile)))
                             File.Delete(Path.Combine("wwwroot", audioFile.SourceFile));
         
@@ -193,9 +234,12 @@ else
                 }
                 else
                 {
+                    Log.Information("{@SourceObject}: File {@File} already is in AudioFiles Collection", 
+                        typeof(SpeechRecognition),  file.Name);
+                    
                     _notificationService.Notify(new NotificationMessage()
                     {
-                        Severity =NotificationSeverity.Warning, 
+                        Severity = NotificationSeverity.Warning, 
                         Summary = "Внимание", 
                         Detail = $"Файл {file.Name} уже есть в базе", 
                         Duration = 4000
@@ -211,11 +255,14 @@ else
             IsUploading = false;
             StateHasChanged();
             
+            Log.Information("{@SourceObject}: Saving AudioFiles Collection in Local Storage", 
+                typeof(SpeechRecognition));
+            
             await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
         }
         catch (Exception ex)
         {
-            _logger.LogError("File: {Filename} Error: {Error}",
+            Log.Error("File: {Filename} Error: {Error}",
                 e.File.Name, ex.Message);
         }
     }
@@ -242,22 +289,35 @@ else
         }
         
         var nomer = _phonesDbService.Find(audioFile.Nomer);
-        if (nomer != null)
-        {
-            audioFile.IdNomer = nomer.idPhone;
-            audioFile.NomerName = nomer.ToString();
-            audioFile.IdNomerName = nomer.idObj;
-        }
+        if (nomer == null) 
+            return;
+        audioFile.IdNomer = nomer.idPhone;
+        audioFile.NomerName = nomer.ToString();
+        audioFile.IdNomerName = nomer.idObj;
     }
 
     private async Task<bool> FileIsNotShort(TempAudioFile audioFile)
     {
+        Log.Information("{@SourceObject}: Analyzing file {@File} len", 
+            typeof(SpeechRecognition), audioFile.Name);
+        
         var mediaInfo = await FFmpegService.Info(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
-        if (mediaInfo.Duration >= new TimeSpan(0, 0, 11)) 
+        
+        Log.Information("{@SourceObject}: File {@File} len is {@Duration}", 
+            typeof(SpeechRecognition), audioFile.Name, mediaInfo.Duration);
+        
+        if (mediaInfo.Duration >= new TimeSpan(0, 0, 10))
             return true;
+        
+        Log.Information("{@SourceObject}: Analyzing file {@File} substance", 
+            typeof(SpeechRecognition), audioFile.Name);
         
         var results = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.ConvertedFile ?? audioFile.SourceFile));
         var letters = results.Where(voskResult => voskResult.text.ToCharArray().Length > 0).Sum(voskResult => voskResult.text.ToCharArray().Length);
+        
+        Log.Information("{@SourceObject}: File {@File} contains {@Count} letters", 
+            typeof(SpeechRecognition), audioFile.Name, letters);
+        
         return letters >= 4;
     }
 }

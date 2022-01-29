@@ -7,6 +7,7 @@
 @using Newtonsoft.Json
 @using Sava.Models
 @using Sava.Service
+@using Serilog
 
 @inject AudioFilesDbService _audioFilesDbService;
 @inject PhonesDbService _phonesDbService;
@@ -115,29 +116,37 @@
 
     private async Task SaveAsync()
     {
-        var audioFile = new AudioFile
+        try
         {
-            Name = TempAudioFile.Name,
-            DateTime = TempAudioFile.DateTime,
-            Duration = TempAudioFile.Duration,
-            Abonent = TempAudioFile.Abonent,
-            IdAbonent = TempAudioFile.IdAbonent,
-            AbonentName = TempAudioFile.AbonentName,
-            IdAbonentName = TempAudioFile.IdAbonentName,
-            Nomer = TempAudioFile.Nomer,
-            IdNomer = TempAudioFile.IdNomer,
-            NomerName = TempAudioFile.NomerName,
-            IdNomerName = TempAudioFile.IdNomerName,
-            SourceFile = await File.ReadAllBytesAsync(Path.Combine("wwwroot", TempAudioFile.SourceFile)),
-            Result = TempAudioFile.Result
-        };
+            var audioFile = new AudioFile
+            {
+                Name = TempAudioFile.Name,
+                DateTime = TempAudioFile.DateTime,
+                Duration = TempAudioFile.Duration,
+                Abonent = TempAudioFile.Abonent,
+                IdAbonent = TempAudioFile.IdAbonent,
+                AbonentName = TempAudioFile.AbonentName,
+                IdAbonentName = TempAudioFile.IdAbonentName,
+                Nomer = TempAudioFile.Nomer,
+                IdNomer = TempAudioFile.IdNomer,
+                NomerName = TempAudioFile.NomerName,
+                IdNomerName = TempAudioFile.IdNomerName,
+                SourceFile = await File.ReadAllBytesAsync(Path.Combine("wwwroot", TempAudioFile.SourceFile)),
+                Result = TempAudioFile.Result
+            };
 
-        await _audioFilesDbService.AddAudioFileAsync(audioFile);
+            await _audioFilesDbService.AddAudioFileAsync(audioFile);
 
-        await File.WriteAllTextAsync(Path.Combine("wwwroot", "reports", Path.GetFileNameWithoutExtension(audioFile.Name)! + ".json"),
-            JsonConvert.SerializeObject(audioFile));
+            await File.WriteAllTextAsync(Path.Combine("wwwroot", "reports", Path.GetFileNameWithoutExtension(audioFile.Name)! + ".json"),
+                JsonConvert.SerializeObject(audioFile));
         
-        await OnSaveCallback.InvokeAsync(TempAudioFile);
+            await OnSaveCallback.InvokeAsync(TempAudioFile);
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
     }
     
     private string PdfResultFile 
@@ -145,28 +154,36 @@
     
     private void GetPdfReport()
     {
-        if (File.Exists("wwwroot/" + PdfResultFile))
-            File.Delete("wwwroot/" + PdfResultFile);
+        try
+        {
+            if (File.Exists("wwwroot/" + PdfResultFile))
+                File.Delete("wwwroot/" + PdfResultFile);
 
-        var writer = new PdfWriter("wwwroot/" + PdfResultFile);
-        var pdf = new PdfDocument(writer);
-        var document = new Document(pdf);
-        var ttf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "Arial.ttf");
-        var baseFont = PdfFontFactory.CreateFont(ttf, "Cp1251");
+            var writer = new PdfWriter("wwwroot/" + PdfResultFile);
+            var pdf = new PdfDocument(writer);
+            var document = new Document(pdf);
+            var ttf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "Arial.ttf");
+            var baseFont = PdfFontFactory.CreateFont(ttf, "Cp1251");
 
-        var dateTime = new Paragraph("Дата " + TempAudioFile.DateTime).SetFont(baseFont);
-        var duration = new Paragraph("Длительность " + TempAudioFile.Duration).SetFont(baseFont);
-        var abonent = new Paragraph("Абонент " + TempAudioFile.Abonent + " " + TempAudioFile.AbonentName).SetFont(baseFont);
-        var nomer = new Paragraph("Номер " + TempAudioFile.Nomer + " " + TempAudioFile.NomerName).SetFont(baseFont);
-        var testResult = new Paragraph(TempAudioFile.Result).SetFont(baseFont);
+            var dateTime = new Paragraph("Дата " + TempAudioFile.DateTime).SetFont(baseFont);
+            var duration = new Paragraph("Длительность " + TempAudioFile.Duration).SetFont(baseFont);
+            var abonent = new Paragraph("Абонент " + TempAudioFile.Abonent + " " + TempAudioFile.AbonentName).SetFont(baseFont);
+            var nomer = new Paragraph("Номер " + TempAudioFile.Nomer + " " + TempAudioFile.NomerName).SetFont(baseFont);
+            var testResult = new Paragraph(TempAudioFile.Result).SetFont(baseFont);
 
-        document.Add(dateTime);
-        document.Add(duration);
-        document.Add(abonent);
-        document.Add(nomer);
-        document.Add(new Paragraph(""));
-        document.Add(testResult);
-        document.Close();
+            document.Add(dateTime);
+            document.Add(duration);
+            document.Add(abonent);
+            document.Add(nomer);
+            document.Add(new Paragraph(""));
+            document.Add(testResult);
+            document.Close();
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
     }
     
     IEnumerable<Person> TempPersonCollection { get; set; }
@@ -183,31 +200,45 @@
 
     private async Task AbonentCollectionChange(object obj)
     {
-        var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
+        try
+        {
+            var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
         
-        if (temp == null) return;
+            if (temp == null) return;
         
-        TempAudioFile.AbonentName = temp.Full;
-        TempAudioFile.IdAbonentName = temp.idObj.ToString();
+            TempAudioFile.AbonentName = temp.Full;
+            TempAudioFile.IdAbonentName = temp.idObj.ToString();
         
-        await OnUpdateCollectionCallback.InvokeAsync();
+            await OnUpdateCollectionCallback.InvokeAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
         
         StateHasChanged();
     }
     
     private async Task NomerCollectionChange(object obj)
     {
-        var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
+        try
+        {
+            var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
         
-        if (temp == null) return;
+            if (temp == null) return;
         
-        TempAudioFile.NomerName = temp.Full;
-        TempAudioFile.IdNomerName = temp.idObj.ToString();
+            TempAudioFile.NomerName = temp.Full;
+            TempAudioFile.IdNomerName = temp.idObj.ToString();
         
-        await OnUpdateCollectionCallback.InvokeAsync();
+            await OnUpdateCollectionCallback.InvokeAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
         
         StateHasChanged();
     }
-
-
 }

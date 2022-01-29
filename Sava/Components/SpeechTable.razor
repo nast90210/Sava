@@ -2,6 +2,7 @@
 @using iText.StyledXmlParser.Css.Selector.Item
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Sava.Service
+@using Serilog
 
 @inject VoskService _voskService
 @inject FFmpegService _ffmpegService
@@ -81,8 +82,8 @@
             {
                 <tr>
                     <td colspan="7">
-                        <AvayaRecognitionForm TempAudioFile="audioFile" 
-                                              OnSaveCallback="DeleteAudio" 
+                        <AvayaRecognitionForm TempAudioFile="audioFile"
+                                              OnSaveCallback="DeleteAudio"
                                               OnUpdateCollectionCallback="UpdateCollection"/>
                     </td>
                 </tr>
@@ -115,7 +116,7 @@
     private bool DeleteDialogOpen { get; set; }
 
     private TempAudioFile TempAudioFileToDelete { get; set; }
-    
+
     private async Task OnDeleteDialogClose(bool accepted)
     {
         if (accepted)
@@ -136,66 +137,93 @@
 
     private async Task DeleteAudio(TempAudioFile tempAudioFile)
     {
-        if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SourceFile)))
-            File.Delete(Path.Combine("wwwroot", tempAudioFile.SourceFile));
-        
-        if (File.Exists(Path.Combine("wwwroot", tempAudioFile.ConvertedFile)))
-            File.Delete(Path.Combine("wwwroot", tempAudioFile.ConvertedFile));
+        try
+        {
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SourceFile)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.SourceFile));
 
-        if (tempAudioFile.SplitedFileChannel0 != null)
-        {
-            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0)))
-                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0));
+            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.ConvertedFile)))
+                File.Delete(Path.Combine("wwwroot", tempAudioFile.ConvertedFile));
+
+            if (tempAudioFile.SplitedFileChannel0 != null)
+            {
+                if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0)))
+                    File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel0));
+            }
+
+            if (tempAudioFile.SplitedFileChannel1 != null)
+            {
+                if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1)))
+                    File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1));
+            }
+
+            if (AudioFiles.Contains(tempAudioFile))
+                AudioFiles.Remove(tempAudioFile);
         }
-        
-        if (tempAudioFile.SplitedFileChannel1 != null)
+        catch (Exception e)
         {
-            if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1)))
-                File.Delete(Path.Combine("wwwroot", tempAudioFile.SplitedFileChannel1));
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
         }
-        
-        if (AudioFiles.Contains(tempAudioFile))
-            AudioFiles.Remove(tempAudioFile);
 
         await UpdateCollection();
     }
-    
-    private async Task UpdateCollection() 
-        => await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+
+    private async Task UpdateCollection()
+    {
+        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+    }
 
     private async Task Recognize(TempAudioFile audioFile)
     {
-        audioFile.CurrentStatus = RecognitionStatus.Execute;
-        
-        if (audioFile.Converted)
-            await SplitAndConvert(audioFile, audioFile.ConvertedFile);
-        else
-            await SplitAndConvert(audioFile, audioFile.SourceFile);
+        try
+        {
+            audioFile.CurrentStatus = RecognitionStatus.Execute;
 
-        audioFile.CurrentStatus = RecognitionStatus.Finish;
-        
-        await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+            if (audioFile.Converted)
+                await SplitAndConvert(audioFile, audioFile.ConvertedFile);
+            else
+                await SplitAndConvert(audioFile, audioFile.SourceFile);
+
+            audioFile.CurrentStatus = RecognitionStatus.Finish;
+
+            await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
+        }
+        catch (Exception e)
+        {
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
+        }
     }
 
     private async Task SplitAndConvert(TempAudioFile audioFile, string file)
     {
-        if (await _ffmpegService.IsStereo(file))
+        try
         {
-            audioFile.IsStereo = true;
-            
-            audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^2].Segmentchannels[0].ToString());
-            audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^1].Segmentchannels[0].ToString());
+            if (await _ffmpegService.IsStereo(file))
+            {
+                audioFile.IsStereo = true;
 
-            //Abonent
-            audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));
-            //Nomer
-            audioFile.SourceResultChannel1 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel1));
+                audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^2].Segmentchannels[0].ToString());
+                audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^1].Segmentchannels[0].ToString());
+
+    //Abonent
+                audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));
+    //Nomer
+                audioFile.SourceResultChannel1 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel1));
+            }
+            else
+            {
+                audioFile.IsStereo = false;
+                audioFile.SourceResult = await _voskService.RecognizeAsync(Path.Combine("wwwroot", file));
+            }
         }
-        else
+        catch (Exception e)
         {
-            audioFile.IsStereo = false;
-            audioFile.SourceResult = await _voskService.RecognizeAsync(Path.Combine("wwwroot", file));
+            Log.Error("File: {Filename} Error: {Error}",
+                e.Source, e.Message);
         }
+        
     }
 
     private async Task OnResultButtonClick(TempAudioFile audioFile)
@@ -203,4 +231,5 @@
         audioFile.IsCollapsed = !audioFile.IsCollapsed;
         await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
     }
+
 }
