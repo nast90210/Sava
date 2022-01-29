@@ -1,6 +1,7 @@
 @page "/"
 @using System.IO
 @using System.IO.Compression
+@using Serilog
 
 @attribute [Authorize]
 
@@ -48,17 +49,22 @@ else
     {
         Results = new List<string>();
 
-        if (Directory.Exists(_reportsPath))
+        if (!Directory.Exists(_reportsPath)) 
+            return;
+        
+        foreach (var file in Directory.GetFiles(_reportsPath))   
         {
-            foreach (var file in Directory.GetFiles(_reportsPath))   
-            {
-                Results.Add(file);
-            }
+            Log.Information("{@SourceObject}: Report folder has reports", 
+                typeof(Index));
+            Results.Add(file);
         }
     }
 
     private async Task PrepareArchive()
     {
+        Log.Information("{@SourceObject}: Trying to create archive with reports", 
+            typeof(Index));
+        
         LinkIsReady = true;
         IsArchiving = true;
         

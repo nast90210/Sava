@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Sava.Data;
 using Sava.Models;
+using Serilog;
 
 namespace Sava.Service
 {
@@ -24,14 +25,19 @@ namespace Sava.Service
 
         public async Task AddAudioFileAsync(AudioFile audioFile)
         {
+            Log.Information("{@SourceObject}: Trying to add AudioFile {@File} to Database", 
+                typeof(AudioFilesDbService), audioFile.Name);
+            
             try
             {
                 _dataBaseContext.AudioFiles.Add(audioFile);
                 await _dataBaseContext.SaveChangesAsync();
             }
-            catch (Exception exception)
+            catch (Exception e)
             {
-                throw new Exception($"Cannot Add TempAudioFile {audioFile.Name}", exception);
+                Log.Error("File: {Filename} Error: {Error}",
+                    e.Source, e.Message);
+                throw new Exception($"Cannot Add TempAudioFile {audioFile.Name}", e);
             }
         }
         

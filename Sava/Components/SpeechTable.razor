@@ -1,5 +1,4 @@
 @using System.IO
-@using iText.StyledXmlParser.Css.Selector.Item
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Sava.Service
 @using Serilog
@@ -137,6 +136,8 @@
 
     private async Task DeleteAudio(TempAudioFile tempAudioFile)
     {
+        Log.Information("{@SourceObject}: Trying to delete file {@File}", 
+            typeof(SpeechTable),  tempAudioFile.Name);
         try
         {
             if (File.Exists(Path.Combine("wwwroot", tempAudioFile.SourceFile)))
@@ -165,17 +166,23 @@
             Log.Error("File: {Filename} Error: {Error}",
                 e.Source, e.Message);
         }
-
+        
         await UpdateCollection();
     }
 
     private async Task UpdateCollection()
     {
+        Log.Information("{@SourceObject}: Updating Local Storage after deleting file", 
+            typeof(SpeechTable));
+        
         await _protectedLocalStorage.SetAsync("TempAudioFiles", AudioFiles);
     }
 
     private async Task Recognize(TempAudioFile audioFile)
     {
+        Log.Information("{@SourceObject}: Trying to recognize file {@File}", 
+            typeof(SpeechTable), audioFile.Name);
+        
         try
         {
             audioFile.CurrentStatus = RecognitionStatus.Execute;
@@ -202,18 +209,24 @@
         {
             if (await _ffmpegService.IsStereo(file))
             {
+                Log.Information("{@SourceObject}: File {@File} is Stereo", 
+                    typeof(SpeechTable), audioFile.Name);
+                
                 audioFile.IsStereo = true;
 
                 audioFile.SplitedFileChannel0 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^2].Segmentchannels[0].ToString());
                 audioFile.SplitedFileChannel1 = await _ffmpegService.ConvertAsync(file, audioFile.Meta.Contact.Parties[^1].Segmentchannels[0].ToString());
 
-    //Abonent
+                //Abonent
                 audioFile.SourceResultChannel0 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel0));
-    //Nomer
+                //Nomer
                 audioFile.SourceResultChannel1 = await _voskService.RecognizeAsync(Path.Combine("wwwroot", audioFile.SplitedFileChannel1));
             }
             else
             {
+                Log.Information("{@SourceObject}: File {@File} is Mono", 
+                    typeof(SpeechTable), audioFile.Name);
+                
                 audioFile.IsStereo = false;
                 audioFile.SourceResult = await _voskService.RecognizeAsync(Path.Combine("wwwroot", file));
             }

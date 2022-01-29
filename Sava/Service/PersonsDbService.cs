@@ -20,18 +20,14 @@ namespace Sava.Service
         public IEnumerable<Person> Find(string text)
         {
             var parts = text.Split(" ");
-            
-            switch (parts.Length)
+
+            return parts.Length switch
             {
-                case 1:
-                    return Surname(parts[0]);
-                case 2:
-                    return SurnameAndName(parts[0], parts[1]);
-                case 3:
-                    return SurnameAndNameAndMiddlename(parts[0], parts[1], parts[2]);
-                default:
-                    return FindAll(text);
-            }
+                1 => Surname(parts[0]),
+                2 => SurnameAndName(parts[0], parts[1]),
+                3 => SurnameAndNameAndMiddlename(parts[0], parts[1], parts[2]),
+                _ => FindAll(text)
+            };
         }
 
         private IEnumerable<Person> Surname(string surname) 
@@ -77,7 +73,6 @@ namespace Sava.Service
                 .OrderBy(person => person.idObj)
                 .Take(20)
                 .ToList(); // Warning По какой-то причине любой другой ти коллекции лагает при выходе в AvayaRecognitionForm 
-            temp = null;
             return result;
         }
     }

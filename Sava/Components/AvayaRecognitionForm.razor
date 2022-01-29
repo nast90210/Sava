@@ -65,7 +65,7 @@
             </div>
             <div class="col-auto">
                 <div class="p-2">
-                    @* <a href="@PdfResultFile" @onclick="GetPdfReport" target="blank" class="btn btn-primary"> Распечатать отчет</a> *@
+                    <a href="@PdfResultFile" @onclick="GetPdfReport" target="blank" class="btn btn-primary"> Распечатать отчет</a>
                 </div>
             </div>
         </div>
@@ -116,6 +116,9 @@
 
     private async Task SaveAsync()
     {
+        Log.Information("{@SourceObject}: Trying to save file {@File}", 
+            typeof(AvayaRecognitionForm),  TempAudioFile.Name);
+        
         try
         {
             var audioFile = new AudioFile
@@ -154,6 +157,9 @@
     
     private void GetPdfReport()
     {
+        Log.Information("{@SourceObject}: Trying to create PDF report of file {@File}", 
+            typeof(AvayaRecognitionForm),  TempAudioFile.Name);
+
         try
         {
             if (File.Exists("wwwroot/" + PdfResultFile))
@@ -200,6 +206,9 @@
 
     private async Task AbonentCollectionChange(object obj)
     {
+        Log.Information("{@SourceObject}: Trying to change AbonentName field of file {@File} to value {@Value}", 
+            typeof(AvayaRecognitionForm),  TempAudioFile.Name, obj.ToString());
+
         try
         {
             var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);
@@ -222,6 +231,9 @@
     
     private async Task NomerCollectionChange(object obj)
     {
+        Log.Information("{@SourceObject}: Trying to change NomerName field of file {@File} to value {@Value}", 
+            typeof(AvayaRecognitionForm),  TempAudioFile.Name, obj.ToString());
+        
         try
         {
             var temp = TempPersonCollection.FirstOrDefault(value => value.Full == (string)obj);

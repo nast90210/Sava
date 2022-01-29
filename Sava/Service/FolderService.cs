@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Sava
 {
     public class FolderService
     {
         //TODO: возможно стоит добавить проверку наличие модели VOSK и ffmpeg и уведомление на Index
-        private List<string> folders = new List<string>{
+        private readonly List<string> _folders = new (){
             "meta",
             "reports",
             "audio",
@@ -21,20 +22,18 @@ namespace Sava
 
         private void CheckSystemFolderExist()
         {
-            foreach(var folder in folders)
+            foreach (var folder in _folders.Where(folder => !Directory.Exists(folder)))
             {
-                if(!Directory.Exists(folder))
-                    Directory.CreateDirectory(Path.Combine("wwwroot",folder));
+                Directory.CreateDirectory(Path.Combine("wwwroot",folder));
             }
         }
 
         public void ClearTemp()
         {
-            foreach (var folder in folders)
+            foreach (var folder in _folders.Where(folder => Directory.Exists(Path.Combine("wwwroot", folder))))
             {
-                if (Directory.Exists(Path.Combine("wwwroot", folder)))
-                    DeleteFiles(Path.Combine("wwwroot", folder));
-            }            
+                DeleteFiles(Path.Combine("wwwroot", folder));
+            }
         }
         
         private static void DeleteFiles(string folder)

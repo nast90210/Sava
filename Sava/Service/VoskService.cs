@@ -122,6 +122,7 @@ namespace Sava.Service
             return builder.ToString();
         }
 
+        [Obsolete]
         public static string GetCombinedResult(List<VoskResult> sourceResultChannel0, string abonent,
             List<VoskResult> sourceResultChannel1, string nomer)
         {
