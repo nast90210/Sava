@@ -11,6 +11,7 @@ namespace Sava
         private readonly List<string> _folders = new (){
             "meta",
             "reports",
+            "pdf",
             "audio",
             Path.Combine("audio","temp"),
         };

@@ -11,6 +11,7 @@
       <Folder Include="wwwroot/ffmpeg" />
       <Folder Include="wwwroot\audio\temp" />
       <Folder Include="wwwroot\meta" />
+      <Folder Include="wwwroot\pdf" />
       <Folder Include="wwwroot\reports" />
     </ItemGroup>
 

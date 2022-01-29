@@ -52,10 +52,14 @@ else
         if (!Directory.Exists(_reportsPath)) 
             return;
         
-        foreach (var file in Directory.GetFiles(_reportsPath))   
+        foreach (var file in Directory.GetFiles(_reportsPath))
         {
+            if (!file.EndsWith("json"))
+                continue;
+            
             Log.Information("{@SourceObject}: Report folder has reports", 
                 typeof(Index));
+            
             Results.Add(file);
         }
     }
