@@ -27,9 +27,6 @@ namespace Sava
         {
             Configuration = configuration;
             
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
-                .CreateLogger();
             Log.Information("Starting up Sava Server");
         }
 
